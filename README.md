@@ -7,3 +7,5 @@ This is the project mirgrate to Android studio from [Ivan Ivanenko](https://gith
 (Link project  : https://github.com/foobnix/LirbiReader)
 
 Hope it is useful to anyone who wants to develop on Android Studio.
+
+Thank you so much ,Ivan Ivanenko.
