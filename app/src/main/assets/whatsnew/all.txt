@@ -1,0 +1,311 @@
+
+<vi>
+* Miễn phí sách trong catalogue 
+* Thêm các liên kết vào danh mục yêu thích 
+* Dấu cách tự động cho ngôn ngữ của sách 
+* Danh sách sách giải thưởng và danh sách sách hàng đầu 
+* Hỗ trợ danh mục cá nhân của FBReader 
+* Hiển thị tất cả các chuỗi theo tác giả, theo thể loại 
+* Nhiều cải tiến và sửa lỗi nhỏ theo phản hồi của bạn
+</vi>
+
+<no-NO>
+* Gratis bøker i kataloger 
+* Legg til katalogkoblinger til favoritter 
+* Automatisk bindestrek for bokspråk 
+* Bestill prislister og toppbøker lister 
+* Støt personlig FBReader katalog 
+* Vis alle serier etter forfatter, etter sjanger 
+* Mange forbedringer og små reparasjoner ved tilbakemelding
+</no-NO>
+
+<th>
+* หนังสือฟรีในแคตตาล็อก 
+* เพิ่มลิงก์ในรายการโปรด 
+* ยัติภพอัตโนมัติสำหรับภาษาหนังสือ 
+* รายการรางวัลหนังสือและรายการหนังสือด้านบน 
+* สนับสนุนแคตตาล็อก FBReader ส่วนบุคคล 
+* แสดงชุดทั้งหมดโดยผู้แต่งตามประเภท 
+* การปรับปรุงและแก้ไขปัญหาเล็ก ๆ ตามความคิดเห็นของคุณ
+</th>
+
+<nl-NL>
+* Gratis boeken in catalogi 
+* Voeg catalogus links toe aan favorieten 
+* Automatische koppeling voor boektaal 
+* Prijsuitreikingslijsten en topboeklijsten 
+* Ondersteun persoonlijke FBReader catalogus 
+* Toon alle series per auteur, per genre 
+* Veel verbeteringen en kleine fixes door uw feedback
+</nl-NL>
+
+<ro>
+* Cărți gratuite în cataloage 
+* Adăugați link-uri de catalog la favorite 
+* Distribuție automată pentru limbi de carte 
+* Cumpărați liste de premii și liste de cărți de sus 
+* Sprijiniți catalogul FBReader personal 
+* Arătați toate seriile după Autor, după Gen 
+* Multe îmbunătățiri și corecții mici prin feedbackul dvs.
+</ro>
+
+<lt>
+* Nemokamos knygos kataloguose 
+* Pridėti katalogų nuorodas į mėgstamiausius 
+* Automatinis pertraukėlė už knygos kalbą 
+* Knygų apdovanojimų sąrašai ir viršutinių knygų sąrašai 
+* Parama asmeniniam FBReader katalogui 
+* Rodyti visas serijas pagal Autorius pagal žanrą 
+* Daugybė patobulinimų ir nedidelių pataisymų jūsų atsiliepimai
+</lt>
+
+<hi-IN>
+* कैटलॉग में मुफ्त किताबें 
+* पसंदीदा के लिए कैटलॉग लिंक जोड़ें 
+* पुस्तक की भाषा के लिए स्वत: हायफ़नेशन 
+* बुक पुरस्कार सूची और शीर्ष पुस्तकों की सूची 
+* व्यक्तिगत एफबीआरडर सूची का समर्थन करें 
+* लेखक द्वारा सभी श्रृंखला दिखाएँ, शैली के द्वारा 
+* आपके सुझाव द्वारा कई सुधार और छोटे सुधार
+</hi-IN>
+
+<es-ES>
+* Libros gratuitos en catálogos 
+* Añadir enlaces a los favoritos del catálogo 
+* Cifra automática para el lenguaje del libro 
+* Lista de premios del libro y listas de libros superiores 
+* Apoyar el catálogo personal de FBReader 
+* Mostrar todas las series por autor, por género 
+* Muchas mejoras y pequeñas correcciones por sus comentarios
+</es-ES>
+
+<fr-FR>
+* Livres gratuits dans les catalogues 
+* Ajouter des liens de catalogue aux favoris 
+* Coupure automatique pour la langue du livre 
+* Listes de prix de livres et listes de livres supérieures 
+* Support du catalogue personnel FBReader 
+* Afficher toutes les séries par auteur, par genre 
+* Beaucoup d’améliorations et de petites corrections par vos commentaires
+</fr-FR>
+
+<fr-CA>
+* Livres gratuits dans les catalogues 
+* Ajouter des liens de catalogue aux favoris 
+* Coupure automatique pour la langue du livre 
+* Listes de prix de livres et listes de livres supérieures 
+* Support du catalogue personnel FBReader 
+* Afficher toutes les séries par auteur, par genre 
+* Beaucoup d’améliorations et de petites corrections par vos commentaires
+</fr-CA>
+
+<tr-TR>
+* Kataloglarda ücretsiz kitaplar 
+* Favorilere katalog bağlantıları ekleme 
+* Kitap dili için otomatik tireleme 
+* Kitap ödül listeleri ve en iyi kitap listeleri 
+* Kişisel FBReader kataloğunu destekleme 
+* Yazara göre Yazar tarafından tüm serileri göster 
+* Geri bildirimlerinizle birçok iyileştirme ve küçük düzeltmeler
+</tr-TR>
+
+<sv-SE>
+* Gratis böcker i kataloger 
+* Lägg till kataloglänkar till favoriter 
+* Automatisk bindning för bokspråk 
+* Bokmärkelsearter och toppböcker listar 
+* Stöd personliga FBReader katalog 
+* Visa alla serier enligt författare, efter genre 
+* Många förbättringar och små fixar genom din feedback
+</sv-SE>
+
+<pl-PL>
+* Bezpłatne książki w katalogach 
+* Dodaj linki katalogowe do ulubionych 
+* Automatyczne dzielenie na język książki 
+* Listy nagród książek i listy książek na górze 
+* Wsparcie osobistego katalogu FBReader 
+* Pokaż wszystkie sekcje według autora, wg gatunku 
+* Wiele udoskonaleń i małych poprawek dzięki Twojej opinii
+</pl-PL>
+
+<pt-PT>
+* Livros gratuitos em catálogos 
+* Adicionar links de catálogo aos favoritos 
+* Separação automática para linguagem de livro 
+* Listas de prêmios de livros e listas de livros topo 
+* Suporte catálogo pessoal de FBReader 
+* Mostrar todas as séries por Autor, por Género 
+* Muitas melhorias e pequenas correções por seu feedback
+</pt-PT>
+
+<pt-BR>
+* Livros gratuitos em catálogos 
+* Adicionar links de catálogo aos favoritos 
+* Separação automática para linguagem de livro 
+* Listas de prêmios de livros e listas de livros topo 
+* Suporte catálogo pessoal de FBReader 
+* Mostrar todas as séries por Autor, por Género 
+* Muitas melhorias e pequenas correções por seu feedback
+</pt-BR>
+
+<iw-IL>
+* ספרים חינם קטלוגים 
+* הוסף קטלוג קישורים למועדפים 
+* מקף אוטומטי עבור שפת הספר 
+* ספר פרסים רשימות רשימות ספרים העליון 
+* תמיכה קטלוג אישי FBReader 
+* הצג את כל הסידורים לפי מחבר, לפי ז’אנר 
+* שיפורים רבים ותיקונים קטנים על ידי המשוב שלך
+</iw-IL>
+
+<uk>
+* Безкоштовні книги в каталогах 
+* Додайте посилання на каталоги у вибране 
+* Автоматичне дефісі за мовою книги 
+* Надрукуйте списки нагород і списки топ-книг 
+* Підтримка персонального каталогу FBReader 
+* Показувати всі серії за автором, по жанру 
+* Багато покращень та невеликих виправлень за відгуками
+</uk>
+
+<ja-JP>
+*カタログの無料書籍
+*お気に入りへのカタログリンクの追加
+*書籍言語の自動ハイフネーション
+*賞品リストやトップの書籍リストのサポート
+*個人的なカタログのサポート
+*著者による全シリーズの表示
+*ジャンル別
+*多くの改善と小さな修正
+</ja-JP>
+
+<id>
+* Buku gratis di katalog 
+* Tambahkan link katalog ke favorit 
+* Tanda penghubung otomatis untuk bahasa buku 
+* Daftar penghargaan buku dan daftar buku terlaris 
+* Dukung katalog FBReader pribadi 
+* Tampilkan semua seri oleh Pengarang, oleh Genre 
+* Banyak perbaikan dan perbaikan kecil oleh umpan balik Anda.
+</id>
+
+<fa>
+* کتاب های رایگان در کاتالوگ 
+* اضافه کردن لینک های کاتالوگ به علاقه مندی ها 
+* خطمشی خودکار برای زبان کتاب 
+* لیست کتاب کتاب و لیست کتاب های برتر 
+* پشتیبانی از کاتولوگ FBReader شخصی 
+* نمایش تمام سری توسط نویسنده، توسط ژانر 
+* بسیاری از پیشرفت و رفع کوچک توسط نظرات شما
+</fa>
+
+<hu-HU>
+* Ingyenes könyvek a katalógusokban 
+* Katalóguslinkek hozzáadása a kedvencekhez 
+* Automatikus elválasztás a könyvnyelvhez 
+* Könyvajánlatok listák és a legfontosabb könyvek listája 
+* Támogatjuk a személyes FBReader katalógust 
+* Az összes sorozatot a szerző írja műfaj szerint 
+* Számos javítás és kis javítás a visszajelzés alapján
+</hu-HU>
+
+<ar>
+* كتب مجانية في كتالوجات 
+* إضافة كتالوج الروابط إلى المفضلة 
+* الواصلة التلقائية للغة الكتاب 
+* قوائم الجوائز كتاب وقوائم الكتب العليا 
+* دعم كتالوج فبريدر الشخصية 
+* عرض كل سلسلة من قبل المؤلف، حسب النوع 
+* العديد من التحسينات والإصلاحات الصغيرة من ملاحظاتك
+</ar>
+
+<de-DE>
+* Kostenlose Bücher in Katalogen 
+* Hinzufügen von Katalog Links zu Favoriten 
+* Automatische Silbentrennung für Buchsprache 
+* Buchlisten und Top-Bücherlisten 
+* Unterstützung persönlicher FBReader Katalog 
+* Alle Serien von Autor, nach Genre anzeigen 
+* Viele Verbesserungen und kleine Korrekturen durch Ihr Feedback
+</de-DE>
+
+<sw>
+* Vitabu vya bure kwenye orodha ya vitabu 
+* Ongeza viungo vya catalog kwenye favorites 
+* Hifadhi ya kichapishaji kwa lugha ya kitabu 
+* Orodha ya tuzo za orodha na orodha ya vitabu vya juu 
+* Tunga orodha ya kibinafsi ya FBReader 
+* Onyesha mfululizo wa Mwandishi, kwa Genre 
+* Maboresho mengi na marekebisho madogo kwa maoni yako
+</sw>
+
+<ko-KR>
+* 카탈로그의 무료 도서 
+* 즐겨 찾기에 카탈로그 링크 추가 
+* 도서 언어에 대한 자동 하이픈 
+* 도서 목록 및 상위 도서 목록 도서 
+* 개인 FBReader 카탈로그 지원 
+* 장르별 작성자 별 전체 시리즈보기 
+* 많은 개선 및 소액 수정
+</ko-KR>
+
+<fi-FI>
+* Vapaa kirjoja luetteloissa 
+* Lisää linkkejä suosikkeihin 
+* Automaattinen tavutuskirja kirjakieliä varten 
+* Kirjapalkintoluettelot ja ylimmäiset kirjaluettelot 
+* Henkilökohtaisen FBReader-luettelon tukeminen 
+* Näytä kaikki sarjat tekijän mukaan lajityypin mukaan 
+* Paljon parannuksia ja pieniä korjauksia palautteen perusteella
+</fi-FI>
+
+<zh-TW>
+*目录中的免费书籍
+*添加目录链接到收藏夹
+*书籍语言的自动连字
+*书籍奖励列表和顶级图书列表
+*支持个人FBReader目录
+*按作者，类型显示所有系列
+*您的反馈有很多改进和小修复
+</zh-TW>
+
+<it-IT>
+* Libri gratuiti nei cataloghi 
+* Aggiungi link del catalogo ai preferiti 
+* Sillabazione automatica per il linguaggio del libro 
+* Elenchi dei premi dei libri e liste dei migliori libri 
+* Supporto del catalogo personale FBReader 
+* Mostra tutta la serie per autore, per genre 
+* Molti miglioramenti e piccole correzioni dai tuoi feedback
+</it-IT>
+
+<ru-RU>
+* Бесплатные книги в каталогах 
+* Добавление ссылок каталога в избранное 
+* Автоматическая расстановка переносов для языка книги 
+* Списки книг и списки лучших книг 
+* Поддержка личного каталога FBReader 
+* Показать все серии по автору, по жанру 
+* Множество улучшений и небольших исправлений по вашим отзывам
+</ru-RU>
+
+<sk>
+* Bezplatné knihy v katalógoch 
+* Pridať katalógové odkazy na obľúbené 
+* Automatické rozdelenie pre knihový jazyk 
+* Rezervovať zoznamy ocenení a zoznamy najlepších kníh 
+* Podporovať osobné katalógy FBReaderu 
+* Zobraziť všetky série Autor, podľa žánru 
+* Veľa vylepšení a malých oprav od vašej spätnej väzby
+</sk>
+
+<en-US>
+* Free books in catalogs
+* Add catalog links to favorites
+* Automatic hyphenation for book language
+* Book awards lists and top books lists
+* Support personal FBReader catalog 
+* Show all series by Author, by Genre
+* Many improvements and small fixes by your feedback
+</en-US>

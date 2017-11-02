@@ -1,0 +1,1200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    xmlns:myseek="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="3dip" >
+
+        <LinearLayout
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="3dip" >
+
+            <ImageView
+                android:id="@+id/imageView1"
+                android:layout_width="42dip"
+                android:layout_height="42dip"
+                android:layout_marginRight="10dip"
+                android:src="@drawable/icon_pdf_pro" />
+
+            <TextView
+                android:id="@+id/downloadPRO"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="60dip"
+                android:gravity="center"
+                android:singleLine="false"
+                android:text="@string/librera_pro_no_ads_leading_book_reader_and_pdf" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/section1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_search_second" >
+
+            <TextView
+                style="@style/textLinkWhite"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/library_settings" />
+
+            <TextView
+                android:id="@+id/onCloseApp"
+                style="@style/textLinkWhite"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginRight="5dip"
+                android:layout_weight="0"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/close_application"
+                android:textSize="@dimen/text_subtitle"
+                android:visibility="visible" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:orientation="vertical" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dip"
+                        android:singleLine="true"
+                        android:text="@string/scan_device_for_new_books"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/searchPaths"
+                        style="@style/textLink"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dip"
+                        android:singleLine="false"
+                        android:text="/mnt/sdcard \r\n /emmc /n /sdcard1" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/onConfigPath"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top"
+                    android:layout_weight="0"
+                    android:text=" ... " />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/supportPDF"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="7"
+                    android:text="PDF"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportDJVU"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="5"
+                    android:text="DJVU"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportFB2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="5"
+                    android:text="FB2"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/supportMOBI"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="7"
+                    android:text="MOBI/AZW"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportEPUB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="5"
+                    android:text="EPUB"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportRTF"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="5"
+                    android:text="RTF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/supportCBZ"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="7"
+                    android:text="CBZ/CBR"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportTXT"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="7"
+                    android:text="HTML/TXT"
+                    android:textSize="12sp" />
+                
+                <CheckBox
+                    android:id="@+id/supportXPS"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="5"
+                    android:text="XPS"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
+                android:text="@string/search_not_supported_formats"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/supportZIP"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ems="7"
+                    android:text="ZIP/RAR"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/supportOther"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:text="DOC/DOCX/CHM"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <CheckBox
+                android:id="@+id/isFirstSurname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/in_the_author_s_name_first_the_surname" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/section2"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dip"
+            android:layout_weight="1"
+            android:background="@drawable/bg_search_second"
+            android:text="@string/preferences" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <ImageView
+                android:id="@+id/iconRestart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_366_restart"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dip"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="@string/theme"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/themeColor"
+                    style="@style/textLink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/light" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/iconRandom"
+                android:layout_width="30dip"
+                android:layout_height="30dip"
+                android:layout_marginRight="2dip"
+                android:background="@drawable/bg_border_ltgray"
+                android:padding="4dip"
+                android:src="@drawable/glyphicons_748_synchronization"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:id="@+id/colorsLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:orientation="horizontal" >
+
+                <include
+                    android:id="@+id/color1"
+                    android:layout_width="25dip"
+                    android:layout_height="25dip"
+                    android:layout_margin="1dip"
+                    layout="@layout/item_color" />
+
+                <include
+                    android:id="@+id/color2"
+                    android:layout_width="25dip"
+                    android:layout_height="25dip"
+                    android:layout_margin="1dip"
+                    layout="@layout/item_color" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/onScreenMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_489_multiple_displays"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="@string/screen_orientation"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/screenModeType"
+                    style="@style/textLink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/automatic" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/onFullScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical"
+            android:visibility="gone" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_488_fit_image_to_frame"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="@string/full_screen_"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/fullscreenOnOff"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="@string/on" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/onColorChoser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:gravity="center_vertical"
+            android:visibility="gone" >
+
+            <ImageView
+                style="@style/wpButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_menu_gallery" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="Color Preferences"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="Book Text and Background colors" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_190_brightness_increase"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dip"
+                    android:text="@string/brightness"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center_vertical" >
+
+                    <TextView
+                        android:id="@+id/curBrigtness"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0"
+                        android:gravity="center"
+                        android:padding="1dip"
+                        android:text="0" />
+
+                    <SeekBar
+                        android:id="@+id/seekBrightness"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/textView4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0"
+                        android:gravity="center"
+                        android:padding="1dip"
+                        android:text="100" />
+
+                    <CheckBox
+                        android:id="@+id/autoSettings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0"
+                        android:singleLine="true"
+                        android:text="@string/automatic"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/onKeyCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical"
+            android:visibility="gone" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_281_settings"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical" >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dip"
+                        android:text="@string/keys"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" >
+
+                        <TextView
+                            android:id="@+id/textNextKeys"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="5dip"
+                            android:singleLine="true"
+                            android:text="Next Keys: 92,94,105,106" />
+
+                        <TextView
+                            android:id="@+id/textPrevKeys"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="5dip"
+                            android:singleLine="true"
+                            android:text="Prev Keys: 93,96,104,107" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <CheckBox
+                android:id="@+id/onReverse"
+                android:layout_width="100dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="0"
+                android:text="@string/reverse_keys"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="0"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_157_show_thumbnails"
+                android:tint="@color/tint_gray" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="vertical" >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dip"
+                        android:text="@string/widget"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/widgetForRecent"
+                        style="@style/textLink"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recent" />
+                </LinearLayout>
+
+                <RadioGroup
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" >
+
+                    <RadioButton
+                        android:id="@+id/checkBoxWigetList"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/list" />
+
+                    <RadioButton
+                        android:id="@+id/checkBoxWidgetGrid"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/grid" />
+
+                    <TextView
+                        android:id="@+id/textView1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="8dip"
+                        android:text="@string/items_" />
+
+                    <TextView
+                        android:id="@+id/widgetItemsCount"
+                        style="@style/textLink"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="8dip"
+                        android:ems="4"
+                        android:text="2"
+                        android:textAllCaps="true" />
+                </RadioGroup>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <CheckBox
+                android:id="@+id/isRememberMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/remember_my_choose" />
+
+            <TextView
+                android:id="@+id/selectedOpenMode"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:text="@string/music_mode" />
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/isOpenLastBook"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/opening_the_last_book_when_the_application_starts" />
+
+        <CheckBox
+            android:id="@+id/isShowCloseAppDialog"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/show_application_close_dialog_every_time" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone" >
+
+            <CheckBox
+                android:id="@+id/isRememberDictionary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/open_in_the_dictionary" />
+
+            <TextView
+                android:id="@+id/selectedDictionaly"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:padding="5dip"
+                android:singleLine="true"
+                android:text="GoogleTranslate" />
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/isLoopAutoplay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text="@string/loop_autoplay"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <CheckBox
+                android:id="@+id/isShowWhatIsNewDialog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/show_the_dialog_what_is_new_for_updates" />
+
+            <TextView
+                android:id="@+id/whatIsNew"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:layout_weight="0"
+                android:text="@string/what_is_new" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="35dip"
+            android:layout_marginTop="4dip"
+            android:visibility="gone" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mouse_scroll_speed"
+                android:textSize="15sp" />
+
+            <SeekBar
+                android:id="@+id/seekWheelSpeed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dip"
+            android:orientation="vertical"
+            android:visibility="gone" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
+                android:text="@string/customize_font_background_colors"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" >
+
+                <TextView
+                    android:id="@+id/onDayColor"
+                    android:layout_width="90dip"
+                    android:layout_height="24dip"
+                    android:layout_marginLeft="5dip"
+                    android:background="#FFFFFF"
+                    android:gravity="center"
+                    android:paddingLeft="5dip"
+                    android:paddingRight="5dip"
+                    android:text="@string/day"
+                    android:textColor="#000000"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/onNigthColor"
+                    android:layout_width="90dip"
+                    android:layout_height="24dip"
+                    android:layout_marginLeft="5dip"
+                    android:background="#000000"
+                    android:gravity="center"
+                    android:paddingLeft="5dip"
+                    android:paddingRight="5dip"
+                    android:text="@string/nigth"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/onDefaultColor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="0dip"
+                    android:layout_marginLeft="10dip"
+                    android:layout_weight="0"
+                    android:ellipsize="end"
+                    android:padding="5dip"
+                    android:singleLine="true"
+                    android:text="@string/restore_defaults"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dip"
+            android:clickable="true"
+            android:gravity="center_vertical" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_529_database_search"
+                android:tint="@color/tint_gray" />
+
+            <TextView
+                android:id="@+id/docSearch"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/search_for_text_in_documents" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical" >
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dip"
+                android:src="@drawable/glyphicons_filetypes_65_pdf"
+                android:tint="@color/tint_gray" />
+
+            <TextView
+                android:id="@+id/docConverter"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/document_converter_online_" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:visibility="gone" >
+
+            <Button
+                android:id="@+id/cleanRecent"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="@string/clear_all_recent" />
+
+            <Button
+                android:id="@+id/cleanBookmarks"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="@string/clear_all_bookmars" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/section7"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_search_second"
+            android:text="@string/tabs_position" />
+
+        <CheckBox
+            android:id="@+id/isshowPrefAsMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/show_preferences_tab_in_the_left_menu" />
+
+        <com.jmedeisis.draglinearlayout.DragLinearLayout
+            android:id="@+id/dragLinearLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <include layout="@layout/item_tab_line" />
+
+            <include layout="@layout/item_tab_line" />
+        </com.jmedeisis.draglinearlayout.DragLinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:id="@+id/tabsDefaul"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/restore_defaults" />
+
+            <TextView
+                android:id="@+id/tabsApply"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/apply" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/section4"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dip"
+            android:background="@drawable/bg_search_second"
+            android:text="@string/cover_image_size" />
+
+        <com.foobnix.pdf.info.view.CustomSeek
+            android:id="@+id/coverSmallSize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            myseek:text="@string/list" >
+        </com.foobnix.pdf.info.view.CustomSeek>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <com.foobnix.pdf.info.view.CustomSeek
+                android:id="@+id/coverBigSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                myseek:text="@string/grid" >
+            </com.foobnix.pdf.info.view.CustomSeek>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dip"
+                android:singleLine="true"
+                android:text="@string/column_count" />
+
+            <TextView
+                android:id="@+id/columsCount"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dip"
+                android:ems="4"
+                android:text="2"
+                android:textAllCaps="true" />
+        </LinearLayout>
+        
+        <CheckBox
+            android:id="@+id/isShowImages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/show_book_covers" />
+
+        <CheckBox
+            android:id="@+id/isBookCoverEffect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/enable_effect_of_the_book_cover" />
+
+        <CheckBox
+            android:id="@+id/isCropBookCovers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/crop_images_in_the_book_cover" />
+
+        <CheckBox
+            android:id="@+id/isBorderAndShadow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/borders_and_shadow_around_the_book_cover" />
+
+        <TextView
+            android:id="@+id/section5"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dip"
+            android:background="@drawable/bg_search_second"
+            android:text="@string/application_user_guide_" />
+
+        <LinearLayout
+            android:id="@+id/tutorialLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="vertical" >
+
+            <TextView
+                android:id="@+id/tutorialLink"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="http://en.lirbi.com English" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/section3"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dip"
+            android:background="@drawable/bg_search_second"
+            android:text="@string/import_or_export_application_settings_to_json_file" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:visibility="visible" >
+
+            <TextView
+                android:id="@+id/importButton"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0"
+                android:text="@string/import_" />
+
+            <TextView
+                android:id="@+id/exportButton"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:layout_weight="0"
+                android:text="@string/export_" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/section6"
+            style="@style/textLinkWhite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dip"
+            android:background="@drawable/bg_search_second"
+            android:text="Product: Lirbi Free" />
+
+        <TextView
+            android:id="@+id/pVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dip"
+            android:text="Version: 1.2.3" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dip"
+                android:text="@string/licence_gnu_gpl_v3_0" />
+
+            <TextView
+                android:id="@+id/libraryLicenses"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:layout_marginTop="7dip"
+                android:text="@string/licenses_for_libraries" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dip" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autor_ivan_ivanenko" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dip"
+            android:gravity="center_vertical" >
+
+            <TextView
+                android:layout_width="100dip"
+                android:layout_height="wrap_content"
+                android:paddingLeft="5dip"
+                android:text="@string/support" />
+
+            <TextView
+                android:id="@+id/onMailSupport"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/my_email" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical" >
+
+            <TextView
+                android:layout_width="100dip"
+                android:layout_height="wrap_content"
+                android:paddingLeft="5dip"
+                android:text="@string/web" />
+
+            <TextView
+                android:id="@+id/openWeb"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="http://librera.mobi" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical" >
+
+            <TextView
+                android:layout_width="100dip"
+                android:layout_height="wrap_content"
+                android:paddingLeft="5dip"
+                android:text="@string/beta_version" />
+
+            <TextView
+                android:id="@+id/openBeta"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="http://beta.librera.mobi" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical" >
+
+            <TextView
+                android:layout_width="100dip"
+                android:layout_height="wrap_content"
+                android:paddingLeft="5dip"
+                android:text="@string/archive" />
+
+            <TextView
+                android:id="@+id/openArchive"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="http://archive.librera.mobi" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/onRateIt"
+            style="@style/textLink"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:singleLine="false"
+            android:text="@string/rate_pdf_reader1" />
+    </LinearLayout>
+
+</ScrollView>

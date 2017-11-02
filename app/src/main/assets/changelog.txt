@@ -1,0 +1,26 @@
+Set max speech speed to 4x
+Remove book from Library
+Sync files in folders
+Search in series
+Delete files fix
+Progress of reading in grid mode
+Automatic hyphenation
+Integration with "My personal FBReader catalogue"
+Support XPS
+Favorites OPDS links
+Clear books library
+Usefull links and Samlib.ru
+Show all series by Author
+Fixed book delete within app
+Show all series by Genre
+Fixed lock\unlock for same doc
+Possibility to hide/show book covers
+Fixed word hyphenation with double hyphen
+Fixed EPUB missing images
+Fixed PDF text selection
+Table of content icon marked grey if no content 
+Custom user CSS styles
+Added image TIFF support
+Show command state in the toast
+Check for a new beta version at startup 
+Updated Hungarian translation

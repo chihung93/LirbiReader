@@ -1,0 +1,7 @@
+* Gratis böcker i kataloger 
+* Lägg till kataloglänkar till favoriter 
+* Automatisk bindning för bokspråk 
+* Bokmärkelsearter och toppböcker listar 
+* Stöd personliga FBReader katalog 
+* Visa alla serier enligt författare, efter genre 
+* Många förbättringar och små fixar genom din feedback
