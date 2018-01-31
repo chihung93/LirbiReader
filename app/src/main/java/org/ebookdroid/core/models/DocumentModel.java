@@ -30,6 +30,7 @@ import org.emdev.utils.listeners.ListenerProxy;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.sys.TempHolder;
 
 public class DocumentModel extends ListenerProxy {
 
@@ -83,9 +84,10 @@ public class DocumentModel extends ListenerProxy {
         return LengthUtils.length(pages);
     }
 
-    public void recycle() {
+    public boolean recycle() {
         decodeService.recycle();
         recyclePages();
+        return pages == EMPTY_PAGES;
     }
 
     public void recyclePages() {
@@ -134,10 +136,9 @@ public class DocumentModel extends ListenerProxy {
     public void setCurrentPageIndex(final PageIndex newIndex, int pages) {
         if (!CompareUtils.equals(currentIndex, newIndex)) {
 
-            final PageIndex oldIndex = this.currentIndex;
             this.currentIndex = newIndex;
 
-            this.<CurrentPageListener> getListener().currentPageChanged(oldIndex, newIndex, pages);
+            this.<CurrentPageListener>getListener().currentPageChanged(newIndex, pages);
         }
     }
 
@@ -187,6 +188,9 @@ public class DocumentModel extends ListenerProxy {
             final CodecPageInfo[] infos = retrievePagesInfo(base, bs, task);
 
             for (int docIndex = 0; docIndex < infos.length; docIndex++) {
+                if (TempHolder.get().loadingCancelled) {
+                    return;
+                }
                 if (!AppState.get().isCut) {
                     CodecPageInfo cpi = infos[docIndex] != null ? infos[docIndex] : defCpi;
 
@@ -225,6 +229,9 @@ public class DocumentModel extends ListenerProxy {
         final CodecPageInfo unified = decodeService.getUnifiedPageInfo();
 
         for (int i = 0; i < infos.length; i++) {
+            if (TempHolder.get().loadingCancelled) {
+                return null;
+            }
             infos[i] = unified != null ? unified : decodeService.getPageInfo(i);
         }
 

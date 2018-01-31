@@ -4,13 +4,16 @@ import java.io.File;
 
 import org.greenrobot.eventbus.EventBus;
 
+import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
 import com.foobnix.android.utils.ResultResponse2;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.widget.FileInformationDialog;
+import com.foobnix.pdf.info.widget.RecentUpates;
 import com.foobnix.pdf.info.widget.ShareDialog;
+import com.foobnix.pdf.info.wrapper.DocumentController;
 import com.foobnix.pdf.info.wrapper.UITab;
 import com.foobnix.pdf.search.activity.msg.OpenDirMessage;
 import com.foobnix.sys.TempHolder;
@@ -28,6 +31,29 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 public class DefaultListeners {
+
+    public static void bindAdapter(final Activity a, final FileMetaAdapter searchAdapter, final DocumentController dc, final Runnable onClick) {
+        searchAdapter.setOnItemClickListener(new ResultResponse<FileMeta>() {
+
+            @Override
+            public boolean onResultRecive(final FileMeta result) {
+                onClick.run();
+                dc.onCloseActivityFinal(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        ExtUtils.showDocumentWithoutDialog(a, new File(result.getPath()), -1);
+
+                    }
+                });
+                return false;
+            }
+
+        });
+        searchAdapter.setOnItemLongClickListener(getOnItemLongClickListener(a, searchAdapter));
+        searchAdapter.setOnMenuClickListener(getOnMenuClick(a, searchAdapter));
+        searchAdapter.setOnStarClickListener(getOnStarClick(a));
+    }
 
     public static void bindAdapter(Activity a, final FileMetaAdapter searchAdapter) {
         searchAdapter.setOnItemClickListener(getOnItemClickListener(a));
@@ -47,7 +73,7 @@ public class DefaultListeners {
 
             @Override
             public boolean onResultRecive(FileMeta result) {
-                File item = new File(result.getPath());
+                final File item = new File(result.getPath());
                 if (item.isDirectory()) {
                     Intent intent = new Intent(UIFragment.INTENT_TINT_CHANGE)//
                             .putExtra(MainTabs2.EXTRA_PAGE_NUMBER, UITab.getCurrentTabIndex(UITab.BrowseFragment));//
@@ -87,7 +113,9 @@ public class DefaultListeners {
                     }
 
                 };
-                FileInformationDialog.showFileInfoDialog(a, item, onDeleteAction);
+                if (ExtUtils.doifFileExists(a, item)) {
+                    FileInformationDialog.showFileInfoDialog(a, item, onDeleteAction);
+                }
                 return true;
             }
         };
@@ -100,6 +128,9 @@ public class DefaultListeners {
         if (!delete) {
             delete = delete(a, file);
         }
+
+        LOG.d("Delete file", file.getPath(), delete);
+
         if (delete) {
             TempHolder.listHash++;
             AppDB.get().delete(result);
@@ -131,20 +162,25 @@ public class DefaultListeners {
 
             @Override
             public boolean onResultRecive(final FileMeta result) {
+
                 final File file = new File(result.getPath());
-                Runnable onDeleteAction = new Runnable() {
 
-                    @Override
-                    public void run() {
-                        deleteFile(a, searchAdapter, result);
+                if (ExtUtils.doifFileExists(a, file)) {
+
+                    Runnable onDeleteAction = new Runnable() {
+
+                        @Override
+                        public void run() {
+                            deleteFile(a, searchAdapter, result);
+                        }
+
+                    };
+
+                    if (ExtUtils.isNotSupportedFile(file)) {
+                        ShareDialog.showArchive(a, file, onDeleteAction);
+                    } else {
+                        ShareDialog.show(a, file, onDeleteAction, -1, null, null);
                     }
-
-                };
-
-                if (ExtUtils.isNotSupportedFile(file)) {
-                    ShareDialog.showArchive(a, file, onDeleteAction);
-                } else {
-                    ShareDialog.show(a, file, onDeleteAction, -1, null);
                 }
 
                 return false;
@@ -206,6 +242,7 @@ public class DefaultListeners {
                 }
                 TempHolder.listHash++;
 
+                RecentUpates.updateAll(a);
                 return false;
             }
         };

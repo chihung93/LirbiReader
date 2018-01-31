@@ -1,9 +1,14 @@
 package com.foobnix.pdf.info.widget;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
+import org.ebookdroid.BookType;
+import org.ebookdroid.core.codec.CodecDocument;
+
 import com.foobnix.android.utils.Dips;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.pdf.info.AppSharedPreferences;
@@ -15,6 +20,7 @@ import com.foobnix.pdf.info.view.AlertDialogs;
 import com.foobnix.pdf.info.view.ScaledImageView;
 import com.foobnix.pdf.info.wrapper.AppBookmark;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.sys.ImageExtractor;
 import com.foobnix.ui2.AppDB;
 import com.foobnix.ui2.FileMetaCore;
 import com.foobnix.ui2.adapter.DefaultListeners;
@@ -25,12 +31,13 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnDismissListener;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -82,7 +89,7 @@ public class FileInformationDialog {
 
             @Override
             public void onClick(View v) {
-                AlertDialogs.showOkDialog(bookmarks.getContext(), bookmarks.getText().toString(), null);
+                AlertDialogs.showOkDialog(a, bookmarks.getText().toString(), null);
             }
         });
 
@@ -94,7 +101,7 @@ public class FileInformationDialog {
 
             @Override
             public void onClick(View v) {
-                AlertDialogs.showOkDialog(infoView.getContext(), infoView.getText().toString(), null);
+                AlertDialogs.showOkDialog(a, infoView.getText().toString(), null);
             }
         });
 
@@ -114,6 +121,40 @@ public class FileInformationDialog {
         } else {
             ((TextView) dialog.findViewById(R.id.metaGenre)).setVisibility(View.GONE);
             ((TextView) dialog.findViewById(R.id.metaGenreID)).setVisibility(View.GONE);
+        }
+
+        TextView metaPDF = (TextView) dialog.findViewById(R.id.metaPDF);
+        metaPDF.setVisibility(View.GONE);
+        if (BookType.PDF.is(file.getPath())) {
+            CodecDocument doc = ImageExtractor.singleCodecContext(file.getPath(), "", 0, 0);
+            if (doc != null) {
+                metaPDF.setVisibility(View.VISIBLE);
+                StringBuilder meta = new StringBuilder();
+                List<String> list = Arrays.asList(
+                        //
+                        "info:Title", //
+                        "info:Author", //
+                        "info:Subject", //
+                        "info:Keywords" //
+                // "info:Creator", //
+                // "info:Producer" //
+                // "info:CreationDate", //
+                // "info:ModDate"//
+                );
+                for (String id : list) {
+                    String metaValue = doc.getMeta(id);
+                    if (TxtUtils.isNotEmpty(metaValue)) {
+                        id = id.replace("info:Title", a.getString(R.string.title));
+                        id = id.replace("info:Author", a.getString(R.string.author));
+                        id = id.replace("info:Subject", a.getString(R.string.subject));
+                        id = id.replace("info:Keywords", a.getString(R.string.keywords));
+                        meta.append("<b>" + id).append(": " + "</b>").append(metaValue).append("<br>");
+                    }
+                }
+                doc.recycle();
+                String text = TxtUtils.replaceLast(meta.toString(), "<br>", "");
+                metaPDF.setText(Html.fromHtml(text));
+            }
         }
 
         TextView convertFile = (TextView) dialog.findViewById(R.id.convertFile);
@@ -172,7 +213,7 @@ public class FileInformationDialog {
             }
         });
 
-        TextView openFile = TxtUtils.underlineTextView((TextView) dialog.findViewById(R.id.openFile));
+        View openFile = dialog.findViewById(R.id.openFile);
         openFile.setVisibility(ExtUtils.isNotSupportedFile(file) ? View.GONE : View.VISIBLE);
         openFile.setOnClickListener(new OnClickListener() {
 
@@ -216,7 +257,7 @@ public class FileInformationDialog {
                 } else {
                     starIcon.setImageResource(R.drawable.star_1);
                 }
-                TintUtil.setTintImage(starIcon, Color.WHITE);
+                TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
 
             }
         });
@@ -226,7 +267,7 @@ public class FileInformationDialog {
         } else {
             starIcon.setImageResource(R.drawable.star_1);
         }
-        TintUtil.setTintImage(starIcon, Color.WHITE);
+        TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
         TintUtil.setBackgroundFillColor(openFile, TintUtil.color);
 
         // builder.setTitle(R.string.file_info);
@@ -240,6 +281,14 @@ public class FileInformationDialog {
         });
 
         infoDialog = builder.create();
+        infoDialog.setOnDismissListener(new OnDismissListener() {
+
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Keyboards.hideNavigation(a);
+            }
+        });
+
         infoDialog.show();
     }
 
@@ -269,7 +318,7 @@ public class FileInformationDialog {
         builder.show();
     }
 
-    public static void showImage1(Context a, String path) {
+    public static void showImageHttpPath(Context a, String path) {
         final Dialog builder = new Dialog(a);
         builder.requestWindowFeature(Window.FEATURE_NO_TITLE);
         builder.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
@@ -288,9 +337,9 @@ public class FileInformationDialog {
 
             }
         });
-        ImageLoader.getInstance().displayImage(path, imageView, IMG.displayImageOptions);
+        ImageLoader.getInstance().displayImage(path, imageView, IMG.displayCacheMemoryDisc);
 
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams((int) (Dips.screenWidth() * 0.9), (int) (Dips.screenHeight() * 0.9));
         builder.addContentView(imageView, params);
         builder.show();
     }
@@ -300,7 +349,7 @@ public class FileInformationDialog {
             return;
         }
         final AlertDialog.Builder builder = new AlertDialog.Builder(a);
-        builder.setMessage(a.getString(R.string.delete_book_) + " " + file.getName()).setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+        builder.setMessage(a.getString(R.string.delete_book_) + "\n" + file.getName()).setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(final DialogInterface dialog, final int id) {
                 onDeleteAction.run();

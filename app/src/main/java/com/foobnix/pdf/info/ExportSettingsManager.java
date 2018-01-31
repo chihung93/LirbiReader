@@ -15,6 +15,7 @@ import org.json.JSONObject;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
 import com.foobnix.dao2.FileMeta;
+import com.foobnix.pdf.info.model.BookCSS;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.ui2.AppDB;
 
@@ -68,8 +69,9 @@ public class ExportSettingsManager {
 
         try {
             AppState.get().save(c);
-            JSONObject root = new JSONObject();
+            BookCSS.get().checkBeforeExport(c);
 
+            JSONObject root = new JSONObject();
             root.put(PREFIX_PDF, exportToJSon(PREFIX_RESULTS, pdfSP, null));
             root.put(PREFIX_BOOKS, exportToJSon(PREFIX_BOOKS, booksSP, null));
             root.put(PREFIX_BOOKMARKS_PREFERENCES, exportToJSon(PREFIX_BOOKMARKS_PREFERENCES, viewerSP, null));
@@ -125,12 +127,13 @@ public class ExportSettingsManager {
         LOG.d("TEST", "Import all from " + file.getPath());
         try {
             String json = new Scanner(file).useDelimiter("\\A").next();
+            LOG.d("[IMPORT]", json);
             JSONObject jsonObject = new JSONObject(json);
 
-            importFromJSon(jsonObject.optJSONObject(PREFIX_PDF), pdfSP, null);
-            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOKS), booksSP, null);
-            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOKMARKS_PREFERENCES), viewerSP, null);
-            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOK_CSS), bookCSS, null);
+            importFromJSon(jsonObject.optJSONObject(PREFIX_PDF), pdfSP);
+            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOKS), booksSP);
+            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOKMARKS_PREFERENCES), viewerSP);
+            importFromJSon(jsonObject.optJSONObject(PREFIX_BOOK_CSS), bookCSS);
 
             jsonToMeta(jsonObject.optJSONArray(PREFIX_RECENT), new ResultResponse<String>() {
 
@@ -161,7 +164,7 @@ public class ExportSettingsManager {
 
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.e(e);
             Toast.makeText(c, e.getMessage(), Toast.LENGTH_LONG).show();
         }
         return false;
@@ -202,29 +205,32 @@ public class ExportSettingsManager {
             if (exclude != null && key.startsWith(exclude)) {
                 continue;
             }
-            jsonObject.put(key, all.get(key));
+            Object value = all.get(key);
+            jsonObject.put(key, value);
+            LOG.d("export", key, value);
         }
         return jsonObject;
     }
 
-    public static void importFromJSon(JSONObject jsonObject, SharedPreferences sp, String exclude) throws JSONException {
+    public static void importFromJSon(JSONObject jsonObject, SharedPreferences sp) throws JSONException {
         if (jsonObject == null) {
             LOG.d("TEST", "import null");
             return;
         }
-        @SuppressWarnings("unchecked")
+        LOG.d("importFromJSon", jsonObject);
+
         Iterator<String> keys = jsonObject.keys();
         Editor edit = sp.edit();
         while (keys.hasNext()) {
             String name = keys.next();
-            if (exclude != null && name.startsWith(exclude)) {
-                continue;
-            }
             Object res = jsonObject.get(name);
+            LOG.d("import", "name", name, "type");
             if (res instanceof String) {
                 edit.putString(name, (String) res);
             } else if (res instanceof Float) {
                 edit.putFloat(name, (Float) res);
+            } else if (res instanceof Double) {
+                edit.putFloat(name, ((Double) res).floatValue());
             } else if (res instanceof Integer) {
                 edit.putInt(name, (Integer) res);
             } else if (res instanceof Boolean) {

@@ -12,6 +12,7 @@ import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.ext.EbookMeta;
 import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.info.TintUtil;
+import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
 
 import android.graphics.Bitmap;
@@ -35,32 +36,34 @@ public abstract class BaseExtractor {
 
     public abstract String getBookOverview(String path);
 
-    public static Bitmap getBookCoverWithTitleBitmap(String title, String author, int w, int h) {
+    public static Bitmap getBookCoverWithTitleBitmap(String title, String author) {
 
-        if (TxtUtils.isEmpty(title)) {
-            title = author;
-            author = "";
-        }
         if (TxtUtils.isEmpty(author)) {
             author = "";
         }
+        if (TxtUtils.isEmpty(title)) {
+            title = "";
+        }
 
+        title = TxtUtils.ellipsize(title, 20);
+        author = TxtUtils.ellipsize(author, 40);
+
+        int w = Dips.dpToPx(AppState.get().coverBigSize - 8);
+        int h = (int) (w * (IMG.WIDTH_DK));
 
         TextPaint pNormal = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
-        // pNormal.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 255));
         pNormal.setColor(Color.WHITE);
-        pNormal.setTextSize(Dips.spToPx(20));
+        pNormal.setTextSize(h / 11);
 
         TextPaint pBold = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
-        // pBold.setColor(ColorUtils.setAlphaComponent(Color.WHITE, 255));
         pBold.setColor(Color.WHITE);
-        pBold.setTextSize(Dips.spToPx(14));
+        pBold.setTextSize(h / 14);
         pBold.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
 
         Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(bitmap);
         c.save();
-        c.drawColor(TintUtil.randomColor(title.hashCode()));
+        c.drawColor(TintUtil.randomColor((title + author).hashCode()));
 
         int margin = Dips.dpToPx(10);
         StaticLayout mTextLayout = new StaticLayout(title, pBold, c.getWidth() - margin * 2, Alignment.ALIGN_CENTER, 1.0f, 0.0f, false);
@@ -77,7 +80,7 @@ public abstract class BaseExtractor {
     public static byte[] getBookCoverWithTitle(String title) {
         try {
 
-            Bitmap bitmap = getBookCoverWithTitleBitmap(title, "", IMG.W_WIDHT, IMG.W_HEIGHT);
+            Bitmap bitmap = getBookCoverWithTitleBitmap(title, "");
 
             byte[] byteArray = bitmapToByteArray(bitmap);
 
@@ -91,7 +94,7 @@ public abstract class BaseExtractor {
 
     public static Bitmap getBookCoverWithTitle(String title, String author, boolean withLogo) {
         try {
-            Bitmap bookCoverWithTitleBitmap = getBookCoverWithTitleBitmap(title, author, IMG.W_WIDHT, IMG.W_HEIGHT);
+            Bitmap bookCoverWithTitleBitmap = getBookCoverWithTitleBitmap(title, author);
             if (withLogo) {
                 MagicHelper.applyBookEffectWithLogo(bookCoverWithTitleBitmap);
             }

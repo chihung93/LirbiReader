@@ -30,11 +30,6 @@ public class Fb2Context extends PdfContext {
 
     @Override
     public CodecDocument openDocumentInner(final String fileName, String password) {
-
-        if (fileName.endsWith("reflow.fb2")) {
-            return new HtmlContext().openDocument(fileName, password);
-        }
-
         String outName = null;
         if (cacheFile.isFile()) {
             outName = cacheFile.getPath();
@@ -45,7 +40,7 @@ public class Fb2Context extends PdfContext {
         if (outName == null) {
             outName = cacheFile.getPath();
             Fb2Extractor.get().convert(fileName, outName);
-            LOG.d("Fb2Context create", outName);
+            LOG.d("Fb2Context create", fileName, "to", outName);
         }
 
         LOG.d("Fb2Context open", outName);
@@ -76,9 +71,11 @@ public class Fb2Context extends PdfContext {
                     muPdfDocument.setFootNotes(notes);
                     JsonHelper.mapToFile(jsonFile, notes);
                     LOG.d("save notes to file", jsonFile);
+                    removeTempFiles();
                 };
             }.start();
         }
+
 
         return muPdfDocument;
     }

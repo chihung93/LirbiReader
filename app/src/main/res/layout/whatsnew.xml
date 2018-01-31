@@ -13,7 +13,7 @@
 
         <ScrollView
             android:layout_width="fill_parent"
-            android:layout_height="140dp"
+            android:layout_height="160dp"
             android:fillViewport="true"
             android:scrollbars="vertical" >
 
@@ -34,7 +34,7 @@
             android:layout_weight="0"
             android:gravity="center"
             android:singleLine="false"
-            android:text="@string/detailed_changelog" />
+            android:text="@string/full_list_of_changes_with_images_web_pdf_" />
 
         <View
             android:id="@+id/fontSectionDivider"

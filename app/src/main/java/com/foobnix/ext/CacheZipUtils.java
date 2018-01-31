@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -22,7 +23,6 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.ebookdroid.BookType;
 
 import com.foobnix.android.utils.LOG;
-import com.foobnix.pdf.info.fragment.SearchFragment;
 
 import android.content.Context;
 import android.os.Environment;
@@ -31,13 +31,50 @@ import android.support.v4.util.Pair;
 public class CacheZipUtils {
     private static final int BUFFER_SIZE = 16 * 1024;
 
-    public static File CACHE_ZIP_DIR;
+    public enum CacheDir {
+        ZipApp("ZipApp"), //
+        ZipService("ZipService"); //
+
+        private final String type;
+
+        private CacheDir(String type) {
+            this.type = type;
+        }
+
+        public static File parent;
+
+        public String getType() {
+            return type;
+        }
+
+        public static void createCacheDirs() {
+            for (CacheDir folder : values()) {
+                File root = new File(parent, folder.getType());
+                if (!root.exists()) {
+                    root.mkdirs();
+                }
+            }
+        }
+
+
+        public void removeCacheContent() {
+            try {
+                removeFiles(getDir().listFiles());
+            } catch (Exception e) {
+                LOG.e(e);
+            }
+        }
+
+        public File getDir() {
+            return new File(parent, type);
+        }
+
+    }
+
     public static File CACHE_UN_ZIP_DIR;
     public static File CACHE_BOOK_DIR;
     public static File CACHE_WEB;
     public static File ATTACHMENTS_CACHE_DIR;
-    public static String APP_CACHE_DIR;
-    public static File LIRBI_DOWNLOAD_DIR;
     public static final Lock cacheLock = new ReentrantLock();
 
     public static void init(Context c) {
@@ -47,32 +84,34 @@ public class CacheZipUtils {
         }
         if (externalCacheDir == null) {
             externalCacheDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-
         }
+        CacheDir.parent = externalCacheDir;
 
         CACHE_BOOK_DIR = new File(externalCacheDir, "Book");
-        CACHE_ZIP_DIR = new File(externalCacheDir, "Zip");
         CACHE_UN_ZIP_DIR = new File(externalCacheDir, "UnZip");
         ATTACHMENTS_CACHE_DIR = new File(externalCacheDir, "Attachments");
         CACHE_WEB = new File(externalCacheDir, "WEB");
-        APP_CACHE_DIR = externalCacheDir.getPath();
-        LIRBI_DOWNLOAD_DIR = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Librera");
-        
+
         CacheZipUtils.createAllCacheDirs();
+        CacheDir.createCacheDirs();
     }
 
     public static void createAllCacheDirs() {
         if (!CACHE_BOOK_DIR.exists()) {
             CACHE_BOOK_DIR.mkdirs();
         }
-        if (!CACHE_ZIP_DIR.exists()) {
-            CACHE_ZIP_DIR.mkdirs();
-        }
         if (!ATTACHMENTS_CACHE_DIR.exists()) {
             ATTACHMENTS_CACHE_DIR.mkdirs();
         }
         if (!CACHE_WEB.exists()) {
             CACHE_WEB.mkdirs();
+        }
+    }
+
+    public static class FilerByDate implements Comparator<File> {
+        @Override
+        public int compare(final File lhs, final File rhs) {
+            return new Long(lhs.lastModified()).compareTo(new Long(rhs.lastModified()));
         }
     }
 
@@ -84,7 +123,7 @@ public class CacheZipUtils {
             return;
         }
 
-        Collections.sort(asList, new SearchFragment.FilerByDate());
+        Collections.sort(asList, new FilerByDate());
 
         for (int i = cacheSize; i < asList.size(); i++) {
             File file = asList.get(i);
@@ -107,6 +146,7 @@ public class CacheZipUtils {
             LOG.e(e);
         }
     }
+
 
     public static void removeFiles(File[] files, File exept) {
         try {
@@ -170,12 +210,12 @@ public class CacheZipUtils {
         }
     }
 
-    public static UnZipRes extracIfNeed(String path) {
+    public static UnZipRes extracIfNeed(String path, CacheDir folder) {
         if (!path.endsWith(".zip")) {
             return new UnZipRes(path, path, null);
         }
 
-        removeFiles(CACHE_ZIP_DIR.listFiles());
+        folder.removeCacheContent();
 
         try {
             InputStream in = new FileInputStream(new File(path));
@@ -185,10 +225,11 @@ public class CacheZipUtils {
             in = new FileInputStream(new File(path));
             ZipArchiveInputStream zipInputStream = new ZipArchiveInputStream(in, "cp1251");
 
+
             ZipArchiveEntry nextEntry = null;
             while ((nextEntry = zipInputStream.getNextZipEntry()) != null) {
                 if (BookType.isSupportedExtByPath(nextEntry.getName())) {
-                    File file = new File(CACHE_ZIP_DIR, nextEntry.getName());
+                    File file = new File(folder.getDir(), nextEntry.getName());
                     BufferedOutputStream fileOutputStream = new BufferedOutputStream(new FileOutputStream(file));
                     writeToStream(zipInputStream, fileOutputStream);
                     LOG.d("Unpack archive", file.getPath());

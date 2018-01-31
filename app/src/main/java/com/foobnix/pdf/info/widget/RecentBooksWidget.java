@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.dao2.FileMeta;
@@ -76,7 +76,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 
 			AppState.get().isMusicianMode = false;
 			AppState.get().isShowToolBar = true;
-			AppState.get().lastA = null;
+			AppState.get().lastClosedActivity = null;
 			int i = 1;
 
 			// MUSIC.setIsRecent(false);
@@ -89,14 +89,14 @@ public class RecentBooksWidget extends AppWidgetProvider {
 			if (id == i++) { // 1
 				AppState.get().isWhiteTheme = true;
 				AppState.get().libraryMode = AppState.MODE_GRID;
-				mainTabs(context, 0, "id0");
+				mainTabsTest(context, 0, "id0");
 			}
 			if (id == i++) { // 2
-				mainTabs(context, 1, "");
+				mainTabsTest(context, 1, "");
 			}
 
 			if (id == i++) {// 3
-				mainTabs(context, 2, "");
+				mainTabsTest(context, 2, "");
 			}
 
 			if (id == i++) {// 4
@@ -104,7 +104,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().colorNigthBg = Color.parseColor("#3a3a3a");
 				AppState.get().colorNigthText = Color.parseColor("#c8c8c8");
 
-				AppState.get().isInvert = false; // nighh
+				AppState.get().isDayNotInvert = false; // nighh
 				easyMode(context, Alice, "", false);
 			}
 
@@ -116,24 +116,24 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().colorDayBg = AppState.COLOR_WHITE;
 
 
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = false;
 				easyMode(context, Alice, "", true);
 			}
 
 			if (id == i++) {// 6
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				easyMode(context, Alice, "id1", false);
 			}
 
 			if (id == i++) {// 7
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				easyMode(context, Alice, "id2", true);
 			}
 			if (id == i++) {// 8
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = false;
 				easyMode(context, Alice, "id3", false);
 			}
@@ -145,7 +145,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().isUseBGImageDay = false;
 				AppState.get().selectedText = "Install";
 
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				advMode(context, PDF, "id2", true);
 			}
@@ -156,7 +156,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().colorDayBg = AppState.COLOR_WHITE;
 				AppState.get().isUseBGImageDay = false;
 
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = false;
 				AppState.get().isShowToolBar = false;
 				AppState.get().isMusicianMode = true;
@@ -167,7 +167,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().tintColor = Color.parseColor(AppState.STYLE_COLORS.get(4));
 				AppState.get().isWhiteTheme = false;
 				TintUtil.init();
-				mainTabs(context, 4, "");
+				mainTabsTest(context, 4, "");
 			}
 
 			if (id == i++) {// 12
@@ -175,14 +175,14 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().isWhiteTheme = false;
 				AppState.get().libraryMode = AppState.MODE_LIST;
 				TintUtil.init();
-				mainTabs(context, 0, "id0");
+				mainTabsTest(context, 0, "id0");
 			}
 
 			if (id == i++)// 13 //dict
 			{
 				AppState.get().tintColor = Color.parseColor(AppState.STYLE_COLORS.get(0));
 				TintUtil.init();
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				AppState.get().selectedText = "There was";
 				easyMode(context, Alice, "id4", true);
@@ -191,7 +191,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 			{
 				AppState.get().tintColor = Color.parseColor(AppState.STYLE_COLORS.get(0));
 				TintUtil.init();
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				easyMode(context, Alice, "id5", true);
 			}
@@ -199,7 +199,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 			{
 				AppState.get().tintColor = Color.parseColor(AppState.STYLE_COLORS.get(0));
 				TintUtil.init();
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				easyMode(context, Alice, "id6", true);
 			}
@@ -207,7 +207,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 			{
 				AppState.get().tintColor = Color.parseColor(AppState.STYLE_COLORS.get(0));
 				TintUtil.init();
-				AppState.get().isInvert = true;
+				AppState.get().isDayNotInvert = true;
 				AppState.get().isEditMode = true;
 				easyMode(context, Alice, "id7", true);
 
@@ -218,7 +218,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().isWhiteTheme = true;
 				AppState.get().libraryMode = AppState.MODE_AUTHORS;
 				TintUtil.init();
-				mainTabs(context, 0, "");
+				mainTabsTest(context, 0, "");
 			}
 
 			if (id == i++) {// 18
@@ -226,7 +226,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().isWhiteTheme = true;
 				AppState.get().libraryMode = AppState.MODE_GENRE;
 				TintUtil.init();
-				mainTabs(context, 0, "");
+				mainTabsTest(context, 0, "");
 			}
 
 			if (id == i++) {// 19
@@ -234,7 +234,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 				AppState.get().isWhiteTheme = true;
 				AppState.get().libraryMode = AppState.MODE_LIST;
 				TintUtil.init();
-				mainTabs(context, 0, "id1");
+				mainTabsTest(context, 0, "id1");
 			}
 
 			return;
@@ -242,8 +242,8 @@ public class RecentBooksWidget extends AppWidgetProvider {
 
 		if (intent.getAction().equals(ACTION_MY)) {
 
-			String className = ViewerActivity.class.getName();
-			if (AppState.getInstance().isAlwaysOpenAsMagazine) {
+			String className = VerticalViewActivity.class.getName();
+            if (AppState.get().isAlwaysOpenAsMagazine) {
 				className = HorizontalViewActivity.class.getName();
 			}
 
@@ -279,7 +279,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 	}
 
 	private void advMode(Context context, FileMeta meta, String id, boolean isEditMode) {
-		Intent intent2 = new Intent(context, ViewerActivity.class);
+		Intent intent2 = new Intent(context, VerticalViewActivity.class);
 		intent2.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 		intent2.setData(Uri.fromFile(new File(meta.getPath())));
 		intent2.putExtra(id, true);
@@ -287,7 +287,7 @@ public class RecentBooksWidget extends AppWidgetProvider {
 		context.startActivity(intent2);
 	}
 
-	private void mainTabs(Context context, int pos, String id) {
+	private void mainTabsTest(Context context, int pos, String id) {
 		Intent intent2 = new Intent(context, MainTabs2.class);
 		// intent2.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		intent2.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -351,16 +351,16 @@ public class RecentBooksWidget extends AppWidgetProvider {
 			recent = AppDB.get().getRecent();
 		}
 
-		String className = ViewerActivity.class.getName();
-		if (AppState.getInstance().isAlwaysOpenAsMagazine) {
+		String className = VerticalViewActivity.class.getName();
+        if (AppState.get().isAlwaysOpenAsMagazine) {
 			className = HorizontalViewActivity.class.getName();
 		}
 		remoteViews.removeAllViews(R.id.linearLayout);
 		for (int i = 0; i < recent.size() && i < AppState.get().widgetItemsCount; i++) {
 			FileMeta fileMeta = recent.get(i);
 			RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_list_image);
-			String url = IMG.toUrl(fileMeta.getPath(), ImageExtractor.COVER_PAGE_WITH_EFFECT, IMG.getImageSize());
-			Bitmap image = ImageLoader.getInstance().loadImageSync(url, IMG.displayImageOptions);
+            String url = IMG.toUrl(fileMeta.getPath(), ImageExtractor.COVER_PAGE_WITH_EFFECT, IMG.getImageSize());
+			Bitmap image = ImageLoader.getInstance().loadImageSync(url, IMG.displayCacheMemoryDisc);
 			v.setImageViewBitmap(R.id.imageView1, image);
 
 			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.fromFile(new File(fileMeta.getPath())));

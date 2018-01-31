@@ -8,11 +8,15 @@ import android.graphics.RectF;
 
 public interface CodecDocument {
 
+    public long getDocumentHandle();
+
     int getPageCount();
 
     int getPageCount(int w, int h, int fsize);
 
     CodecPage getPage(int pageNuber);
+
+    CodecPage getPageInner(int pageNuber);
 
     CodecPageInfo getUnifiedPageInfo();
 
@@ -50,4 +54,10 @@ public interface CodecDocument {
 	void saveAnnotations(String path);
 
     String documentToHtml();
+
+    String getBookTitle();
+
+    String getBookAuthor();
+
+    String getMeta(String option);
 }

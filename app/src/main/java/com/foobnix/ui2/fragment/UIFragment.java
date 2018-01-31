@@ -53,6 +53,7 @@ public abstract class UIFragment<T> extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         handler = new Handler();
+
     }
 
     @Override
@@ -71,16 +72,16 @@ public abstract class UIFragment<T> extends Fragment {
 
     int listHash = 0;
 
-
-    public void onSelectFragment() {
+    public final void onSelectFragment() {
         if (getActivity() == null) {
             return;
         }
         if (listHash != TempHolder.listHash) {
             LOG.d("TempHolder.listHash", listHash, TempHolder.listHash);
             resetFragment();
-            notifyFragment();
             listHash = TempHolder.listHash;
+        } else {
+            notifyFragment();
         }
     }
 
@@ -125,7 +126,7 @@ public abstract class UIFragment<T> extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        onSelectFragment();
+        notifyFragment();
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(broadcastReceiver, new IntentFilter(INTENT_TINT_CHANGE));
         EventBus.getDefault().register(this);
     }
@@ -182,6 +183,7 @@ public abstract class UIFragment<T> extends Fragment {
     AsyncTask<Object, Object, List<T>> execute;
 
     public void populate() {
+
         if (isInProgress()) {
             AsyncTasks.toastPleaseWait(getActivity());
             return;
@@ -191,6 +193,7 @@ public abstract class UIFragment<T> extends Fragment {
                 @Override
                 protected List<T> doInBackground(Object... params) {
                     try {
+                        LOG.d("UIFragment", "prepareDataInBackground");
                         return prepareDataInBackground();
                     } catch (Exception e) {
                         LOG.e(e);
@@ -250,6 +253,11 @@ public abstract class UIFragment<T> extends Fragment {
                     if (type == FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_FOLDERS) {
                         return num;
                     }
+
+                    if (type == FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_NONE) {
+                        return num;
+                    }
+
                     if (type == FileMetaAdapter.DISPALY_TYPE_SERIES) {
                         return num;
                     }
@@ -266,9 +274,8 @@ public abstract class UIFragment<T> extends Fragment {
             RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getActivity());
             recyclerView.setLayoutManager(mLayoutManager);
             recyclerView.setAdapter(authorsAdapter);
-        }
-        if (mode == AppState.MODE_LIST_COMPACT) {
-            final int num = Math.max(2, Dips.screenWidthDP() / AppState.get().coverBigSize / 2);
+        } else if (mode == AppState.MODE_LIST_COMPACT) {
+            final int num = Math.max(2, Dips.screenWidthDP() / Dips.dpToPx(300));
             GridLayoutManager mGridManager = new GridLayoutManager(getActivity(), num);
             mGridManager.setSpanSizeLookup(new SpanSizeLookup() {
 
@@ -278,18 +285,45 @@ public abstract class UIFragment<T> extends Fragment {
                     if (type == FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_FOLDERS) {
                         return num;
                     }
+
+                    if (type == FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_NONE) {
+                        return num;
+                    }
+
                     return (type == FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_BOOKS) ? num : 1;
                 }
             });
 
             recyclerView.setLayoutManager(mGridManager);
-            searchAdapter.setAdapterType(FileMetaAdapter.ADAPTER_LIST);
+            searchAdapter.setAdapterType(FileMetaAdapter.ADAPTER_LIST_COMPACT);
             recyclerView.setAdapter(searchAdapter);
         }
 
         if (recyclerView instanceof FastScrollRecyclerView) {
             ((FastScrollRecyclerView) recyclerView).myConfiguration();
         }
+    }
+
+    public boolean onKeyDown(int keyCode) {
+        if (recyclerView == null) {
+            return false;
+        }
+        View childAt = recyclerView.getChildAt(0);
+        if (childAt == null) {
+            return false;
+        }
+        int size = childAt.getHeight() + childAt.getPaddingTop() + Dips.dpToPx(2);
+
+        if (AppState.get().getNextKeys().contains(keyCode)) {
+            recyclerView.scrollBy(0, size);
+            return true;
+
+        }
+        if (AppState.get().getPrevKeys().contains(keyCode)) {
+            recyclerView.scrollBy(0, size * -1);
+            return true;
+        }
+        return false;
     }
 
 }

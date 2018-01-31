@@ -22,7 +22,7 @@ public class CustomSeek extends FrameLayout {
 
     public CustomSeek(Context context) {
         super(context);
-
+        initWith("", "");
     }
 
     public void initWith(String name, String textColor) {
@@ -88,6 +88,10 @@ public class CustomSeek extends FrameLayout {
 
     public void setTitleTextWidth(int width) {
         titleText.getLayoutParams().width = width;
+    }
+
+    public TextView getTitleText() {
+        return titleText;
     }
 
     @Override

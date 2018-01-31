@@ -6,15 +6,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.ebookdroid.droids.mupdf.codec.exceptions.MuPdfPasswordException;
 import org.ebookdroid.droids.mupdf.codec.exceptions.MuPdfPasswordRequiredException;
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
 
 import com.foobnix.android.utils.LOG;
-import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.ext.CacheZipUtils;
-import com.foobnix.ext.EbookMeta;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.model.BookCSS;
-import com.foobnix.ui2.FileMetaCore;
+import com.foobnix.sys.TempHolder;
 
 import android.graphics.Bitmap;
 
@@ -31,45 +30,60 @@ public abstract class AbstractCodecContext implements CodecContext {
      */
     protected AbstractCodecContext() {
         this(SEQ.incrementAndGet());
+        TempHolder.get().loadingCancelled = false;
     }
 
     public abstract CodecDocument openDocumentInner(String fileName, String password);
 
+    public CodecDocument openDocumentInnerCanceled(String fileName, String password) {
+        CodecDocument openDocument = openDocumentInner(fileName, password);
+        LOG.d("removeTempFiles1", TempHolder.get().loadingCancelled);
+        if (TempHolder.get().loadingCancelled) {
+            TempHolder.get().clear();
+            removeTempFiles();
+            return null;
+        }
+        return openDocument;
+    }
+
+    public void removeTempFiles() {
+        LOG.d("removeTempFiles2", TempHolder.get().loadingCancelled);
+        if (TempHolder.get().loadingCancelled) {
+            recycle();
+            CacheZipUtils.removeFiles(CacheZipUtils.CACHE_BOOK_DIR.listFiles());
+        }
+    }
+
     @Override
     public CodecDocument openDocument(String fileNameOriginal, String password) {
-        LOG.d("Open Document", fileNameOriginal);
+        LOG.d("Open-Document", fileNameOriginal);
+        // TempHolder.get().loadingCancelled = false;
         if (ExtUtils.isZip(fileNameOriginal)) {
-            LOG.d("Open Document ZIP", fileNameOriginal);
-            return openDocumentInner(fileNameOriginal, password);
+            LOG.d("Open-Document ZIP", fileNameOriginal);
+            return openDocumentInnerCanceled(fileNameOriginal, password);
         }
 
-        EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(fileNameOriginal);
 
-        String lang = ebookMeta.getLang();
-        if (TxtUtils.isNotEmpty(lang)) {
-            BookCSS.get().hypenLang = lang;
-        }
-
-        LOG.d("openDocument2 LANG:", lang, fileNameOriginal);
+        LOG.d("Open-Document 2 LANG:", BookCSS.get().hypenLang, fileNameOriginal);
 
         File cacheFileName = getCacheFileName(fileNameOriginal);
         CacheZipUtils.removeFiles(CacheZipUtils.CACHE_BOOK_DIR.listFiles(), cacheFileName);
 
         if (cacheFileName != null && cacheFileName.isFile()) {
-            LOG.d("Open Document from cache", fileNameOriginal);
-            return openDocumentInner(fileNameOriginal, password);
+            LOG.d("Open-Document from cache", fileNameOriginal);
+            return openDocumentInnerCanceled(fileNameOriginal, password);
         }
 
         CacheZipUtils.cacheLock.lock();
         CacheZipUtils.createAllCacheDirs();
         try {
-            String fileName = CacheZipUtils.extracIfNeed(fileNameOriginal).unZipPath;
-            LOG.d("Open Document extract", fileName);
+            String fileName = CacheZipUtils.extracIfNeed(fileNameOriginal, CacheDir.ZipApp).unZipPath;
+            LOG.d("Open-Document extract", fileName);
             if (!ExtUtils.isValidFile(fileName)) {
                 return null;
             }
             try {
-                return openDocumentInner(fileName, password);
+                return openDocumentInnerCanceled(fileName, password);
             } catch (MuPdfPasswordException e) {
                 throw new MuPdfPasswordRequiredException();
             } catch (Throwable e) {
@@ -172,8 +186,8 @@ public abstract class AbstractCodecContext implements CodecContext {
     private static int getDensityDPI() {
         if (densityDPI == null) {
             try {
-                final Field f = ViewerActivity.DM.getClass().getDeclaredField("densityDpi");
-                densityDPI = ((Integer) f.get(ViewerActivity.DM));
+                final Field f = VerticalViewActivity.DM.getClass().getDeclaredField("densityDpi");
+                densityDPI = ((Integer) f.get(VerticalViewActivity.DM));
             } catch (final Throwable ex) {
                 densityDPI = Integer.valueOf(120);
             }

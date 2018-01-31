@@ -5,9 +5,9 @@ import java.util.regex.Pattern;
 
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
-import com.foobnix.android.utils.MemoryUtils;
 import com.foobnix.pdf.info.model.BookCSS;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.pdf.reader.R;
 import com.foobnix.sys.ImageExtractor;
 import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiskCache;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
@@ -19,7 +19,6 @@ import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory.Options;
 import android.graphics.Color;
@@ -31,12 +30,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
-import com.foobnix.pdf.reader.R;
 
 public class IMG {
 
+    public static final float WIDTH_DK = 1.4f;
+    public static final int DP5 = -Dips.dpToPx(40);
     private static final ColorDrawable COLOR_DRAWABLE = new ColorDrawable(Color.LTGRAY);
-    public static int W_WIDHT, W_HEIGHT;
 
     public static final Config BMP_CFG = Config.RGB_565;
     public static final int TWO_LINE_COVER_SIZE = 74;
@@ -49,14 +48,12 @@ public class IMG {
     public static void init(Context context) {
         IMG.context = context;
 
-        W_WIDHT = Dips.dpToPx(170);
-        W_HEIGHT = (int) (W_WIDHT * 1.5f);
 
         bookBGWithMark = context.getResources().getDrawable(R.drawable.bookeffect2);
         bookBGNoMark = context.getResources().getDrawable(R.drawable.bookeffect1);
 
         final Builder builder = new DisplayImageOptions.Builder();
-        builder.cacheInMemory(MemoryUtils.IS_BIG_MEMORY_SIZE);
+        builder.cacheInMemory(true);
         builder.cacheOnDisk(true);
         builder.showImageOnLoading(COLOR_DRAWABLE);
         builder.showImageOnFail(COLOR_DRAWABLE);
@@ -88,7 +85,7 @@ public class IMG {
         }
         int widht = Dips.dpToPx(AppState.get().coverSmallSize);
         LayoutParams lp = imageView.getLayoutParams();
-        lp.height = (int) (widht * 1.5);
+        lp.height = (int) (widht * WIDTH_DK);
     }
 
     public static void updateLayoutHeightSizeBig(ViewGroup imageView) {
@@ -97,7 +94,7 @@ public class IMG {
         }
         int widht = Dips.dpToPx(AppState.get().coverBigSize);
         LayoutParams lp = imageView.getLayoutParams();
-        lp.height = (int) (widht * 1.5);
+        lp.height = (int) (widht * WIDTH_DK);
     }
 
     public static LayoutParams updateImageSizeSmall(View imageView) {
@@ -106,7 +103,7 @@ public class IMG {
         }
         LayoutParams lp = imageView.getLayoutParams();
         lp.width = Dips.dpToPx(AppState.get().coverSmallSize);
-        lp.height = (int) (lp.width * 1.5);
+        lp.height = (int) (lp.width * WIDTH_DK);
         return lp;
     }
 
@@ -117,7 +114,7 @@ public class IMG {
 
         LayoutParams lp = imageView.getLayoutParams();
         lp.width = Dips.dpToPx(AppState.get().coverBigSize);
-        lp.height = (int) (lp.width * 1.5);
+        lp.height = (int) (lp.width * WIDTH_DK);
     }
 
     public static void updateImageSizeBig(View imageView, int sizeDP) {
@@ -127,7 +124,7 @@ public class IMG {
 
         LayoutParams lp = imageView.getLayoutParams();
         lp.width = Dips.dpToPx(sizeDP);
-        lp.height = (int) (lp.width * 1.5);
+        lp.height = (int) (lp.width * WIDTH_DK);
     }
 
     public static int alphaColor(int persent, String color) {
@@ -147,24 +144,23 @@ public class IMG {
 
     }
 
-    public static DisplayImageOptions displayImageOptions = new DisplayImageOptions.Builder() //
+    public static DisplayImageOptions displayCacheMemoryDisc = new DisplayImageOptions.Builder() //
             .showImageOnFail(COLOR_DRAWABLE)//
             .showImageForEmptyUri(COLOR_DRAWABLE)//
             .showImageOnFail(COLOR_DRAWABLE)//
-            .cacheInMemory(MemoryUtils.IS_BIG_MEMORY_SIZE)//
+            .cacheInMemory(true)//
             .cacheOnDisk(true)//
             .considerExifParams(false)//
-            .imageScaleType(ImageScaleType.EXACTLY)//
+            .imageScaleType(ImageScaleType.NONE)//
             .resetViewBeforeLoading(RESET_VIEW_BEFORE_LOADING)//
             .bitmapConfig(BMP_CFG)//
-            // .displayer(new FadeInBitmapDisplayer(200))//
             .build();//
 
     public static DisplayImageOptions displayOPDSOptions = new DisplayImageOptions.Builder() //
             .showImageOnFail(R.drawable.web)//
             .showImageForEmptyUri(R.drawable.web)//
             .showImageOnFail(R.drawable.web)//
-            .cacheInMemory(MemoryUtils.IS_BIG_MEMORY_SIZE)//
+            .cacheInMemory(true)//
             .cacheOnDisk(true)//
             .considerExifParams(false)//
             .imageScaleType(ImageScaleType.IN_SAMPLE_POWER_OF_2)//
@@ -177,8 +173,8 @@ public class IMG {
             .showImageOnFail(COLOR_DRAWABLE)//
             .showImageForEmptyUri(COLOR_DRAWABLE)//
             .showImageOnFail(COLOR_DRAWABLE)//
-            .cacheInMemory(MemoryUtils.IS_BIG_MEMORY_SIZE)//
-            .imageScaleType(ImageScaleType.EXACTLY)//
+            .cacheInMemory(true)//
+            .imageScaleType(ImageScaleType.NONE)//
             .considerExifParams(false)//
             .cacheOnDisk(false)//
             .resetViewBeforeLoading(RESET_VIEW_BEFORE_LOADING)//
@@ -189,7 +185,7 @@ public class IMG {
             .showImageOnFail(COLOR_DRAWABLE)//
             .showImageForEmptyUri(COLOR_DRAWABLE)//
             .showImageOnFail(COLOR_DRAWABLE)//
-            .cacheInMemory(MemoryUtils.IS_BIG_MEMORY_SIZE)//
+            .cacheInMemory(true)//
             .cacheOnDisk(false)//
             .considerExifParams(false)//
             .imageScaleType(ImageScaleType.NONE)//
@@ -209,8 +205,19 @@ public class IMG {
             .bitmapConfig(BMP_CFG)//
             .build();//
 
+    public static DisplayImageOptions noneOptions = new DisplayImageOptions.Builder() //
+            .showImageOnFail(COLOR_DRAWABLE)//
+            .showImageForEmptyUri(COLOR_DRAWABLE)//
+            .showImageOnFail(COLOR_DRAWABLE)//
+            .cacheInMemory(false)//
+            .cacheOnDisk(false)//
+            .considerExifParams(false)//
+            .imageScaleType(ImageScaleType.NONE)//
+            .bitmapConfig(BMP_CFG)//
+            .build();//
+
     public static void display(final Context c, final String path, final ImageView imageView, final int sizePx, final int page, ImageLoadingListener listener) {
-        display(c, path, imageView, sizePx, page, listener, IMG.displayImageOptions);
+        display(c, path, imageView, sizePx, page, listener, IMG.displayCacheMemoryDisc);
 
     }
 
@@ -222,7 +229,7 @@ public class IMG {
 
         PageUrl pageUrl = IMG.toPageUrl(path, page, sizePx);
         pageUrl.setUnic(BookCSS.get().toCssString().hashCode());
-        pageUrl.setInvert(!AppState.get().isInvert);
+        pageUrl.setInvert(!AppState.get().isDayNotInvert);
 
         final String url = pageUrl.toString();
         if (listener != null) {
@@ -240,9 +247,9 @@ public class IMG {
         }
 
         if (listener != null) {
-            ImageLoader.getInstance().displayImage(pageUrl, imageView, IMG.displayImageOptions, listener);
+            ImageLoader.getInstance().displayImage(pageUrl, imageView, IMG.displayCacheMemoryDisc, listener);
         } else {
-            ImageLoader.getInstance().displayImage(pageUrl, imageView, IMG.displayImageOptions);
+            ImageLoader.getInstance().displayImage(pageUrl, imageView, IMG.displayCacheMemoryDisc);
         }
     }
 
@@ -276,34 +283,27 @@ public class IMG {
         }
     }
 
-    public static Bitmap getCoverPage(String path) {
-        return ImageLoader.getInstance().loadImageSync(IMG.toUrl(path, ImageExtractor.COVER_PAGE, IMG.W_WIDHT));
-    }
 
     public static void getCoverPage(ImageView img, String path, int width) {
         ImageLoader.getInstance().displayImage(IMG.toUrl(path, ImageExtractor.COVER_PAGE, width), img);
     }
 
     public static void getCoverPageWithEffect(ImageView img, String path, int width, ImageLoadingListener listener) {
-        ImageLoader.getInstance().displayImage(IMG.toUrl(path, ImageExtractor.COVER_PAGE, width), img, listener);
+        ImageLoader.getInstance().displayImage(IMG.toUrl(path, ImageExtractor.COVER_PAGE, width), img, IMG.displayCacheMemoryDisc, listener);
     }
 
     public static void getCoverPageWithEffectPos(ImageView img, String path, int width, int pos, ImageLoadingListener listener) {
-        ImageLoader.getInstance().displayImage(IMG.toUrlPos(path, ImageExtractor.COVER_PAGE, width, pos), img, listener);
-    }
-
-    public static void getCoverPage(ImageView img, String path, int sizeDP, ImageLoadingListener listener) {
-        ImageLoader.getInstance().displayImage(IMG.toUrl(path, ImageExtractor.COVER_PAGE_NO_EFFECT, sizeDP), img, listener);
+        ImageLoader.getInstance().displayImage(IMG.toUrlPos(path, ImageExtractor.COVER_PAGE, width, pos), img, IMG.displayCacheMemoryDisc, listener);
     }
 
     public static String toUrl(final String path, final int page, final int width) {
         PageUrl pdfUrl = new PageUrl(path, page, width, 0, false, false, 0);
+        pdfUrl.setUnic(0);
         return pdfUrl.toString();
     }
 
     public static String toUrlPos(final String path, final int page, final int width, int pos) {
         PageUrl pdfUrl = new PageUrl(path, page, width, 0, false, false, 0);
-        pdfUrl.setPosition(pos);
         return pdfUrl.toString();
     }
 

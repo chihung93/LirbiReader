@@ -3,6 +3,7 @@ package com.foobnix.pdf;
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.pdf.info.TintUtil;
+import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.ui2.adapter.TabsAdapter2;
 
 import android.content.Context;
@@ -61,7 +62,7 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
     private static final int TITLE_OFFSET_DIPS = 24;
     private static final int TAB_VIEW_PADDING_DIPS = 16;
-    private static final int TAB_VIEW_TEXT_SIZE_SP = 12;
+    private static final int TAB_VIEW_TEXT_SIZE_SP = 13;
 
     private int mTitleOffset;
 
@@ -195,6 +196,10 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
     private void populateTabStrip() {
         final TabsAdapter2 adapter = (TabsAdapter2) mViewPager.getAdapter();
+        if (adapter == null) {
+            return;
+        }
+
         final View.OnClickListener tabClickListener = new TabClickListener();
 
         for (int i = 0; i < adapter.getCount(); i++) {
@@ -210,6 +215,9 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
             if (tabView == null) {
                 tabView = createDefaultTabView(getContext());
+                if (AppState.get().isInkMode) {
+                    ((TextView) tabView).setTextSize(16);
+                }
             }
 
             if (tabTitleView == null && TextView.class.isInstance(tabView)) {
@@ -221,12 +229,20 @@ public class SlidingTabLayout extends HorizontalScrollView {
                 // TintUtil.addTextView(tabTitleView);
 
                 Drawable drawable = getContext().getResources().getDrawable(adapter.getIconResId(i));
-                TintUtil.setDrawableTint(drawable, Color.WHITE);
                 tabTitleView.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null);
                 tabTitleView.setCompoundDrawablePadding(Dips.dpToPx(5));
-                tabTitleView.setTextColor(Color.WHITE);
+
+                if (AppState.get().isInkMode) {
+                    // TintUtil.setDrawableTint(drawable, Color.BLACK);
+                    tabTitleView.setTextColor(TintUtil.color);
+                } else {
+                    TintUtil.setDrawableTint(drawable, Color.WHITE);
+                    tabTitleView.setTextColor(Color.WHITE);
+                }
 
                 tabView.setOnClickListener(tabClickListener);
+
+                
 
                 getmTabStrip().addView(tabView);
             }
@@ -322,13 +338,18 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
     }
 
-    private void updateIcons(int position) {
+    public void updateIcons(int position) {
         for (int i = 0; i < getmTabStrip().getChildCount(); i++) {
             TextView childAt = (TextView) getmTabStrip().getChildAt(i);
             int myColor = i == position ? Color.WHITE : TintUtil.colorSecondTab;
-            childAt.setTextColor(myColor);
             Drawable drawable = childAt.getCompoundDrawables()[0];
-            TintUtil.setDrawableTint(drawable, myColor);
+            if (AppState.get().isInkMode) {
+                TintUtil.setDrawableTint(drawable, TintUtil.color);
+                childAt.setTextColor(TintUtil.color);
+            } else {
+                childAt.setTextColor(myColor);
+                TintUtil.setDrawableTint(drawable, myColor);
+            }
         }
     }
 
@@ -337,7 +358,7 @@ public class SlidingTabLayout extends HorizontalScrollView {
         public void onClick(View v) {
             for (int i = 0; i < getmTabStrip().getChildCount(); i++) {
                 if (v == getmTabStrip().getChildAt(i)) {
-                    mViewPager.setCurrentItem(i);
+                    mViewPager.setCurrentItem(i, !AppState.get().isInkMode);
                     return;
                 }
             }

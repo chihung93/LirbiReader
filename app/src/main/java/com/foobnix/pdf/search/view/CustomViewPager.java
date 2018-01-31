@@ -26,7 +26,6 @@ public class CustomViewPager extends RtlViewPager {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
-
         if (event.getPointerCount() == 1 && AppState.get().selectedText == null) {
             try {
                 return super.onInterceptTouchEvent(event);

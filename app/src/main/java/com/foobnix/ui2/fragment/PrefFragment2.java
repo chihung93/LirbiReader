@@ -1,23 +1,37 @@
 package com.foobnix.ui2.fragment;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import com.buzzingandroid.ui.HSVColorPickerDialog;
 import com.buzzingandroid.ui.HSVColorPickerDialog.OnColorSelectedListener;
 import com.foobnix.android.utils.Apps;
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.IntegerResponse;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
+import com.foobnix.android.utils.ResultResponse2;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.pdf.info.AndroidWhatsNew;
 import com.foobnix.pdf.info.AppSharedPreferences;
 import com.foobnix.pdf.info.AppsConfig;
 import com.foobnix.pdf.info.ExtUtils;
+import com.foobnix.pdf.info.IMG;
+import com.foobnix.pdf.info.PasswordDialog;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.Urls;
-import com.foobnix.pdf.info.fragment.KeyCodeDialog;
-import com.foobnix.pdf.info.fragment.SearchFragment;
+import com.foobnix.pdf.info.model.BookCSS;
+import com.foobnix.pdf.info.view.AlertDialogs;
+import com.foobnix.pdf.info.view.BrightnessHelper;
 import com.foobnix.pdf.info.view.CustomSeek;
+import com.foobnix.pdf.info.view.Dialogs;
+import com.foobnix.pdf.info.view.KeyCodeDialog;
 import com.foobnix.pdf.info.view.MultyDocSearchDialog;
+import com.foobnix.pdf.info.view.MyPopupMenu;
+import com.foobnix.pdf.info.widget.ChooserDialogFragment;
 import com.foobnix.pdf.info.widget.ColorsDialog;
 import com.foobnix.pdf.info.widget.ColorsDialog.ColorsDialogResult;
 import com.foobnix.pdf.info.widget.DialogTranslateFromTo;
@@ -25,26 +39,32 @@ import com.foobnix.pdf.info.widget.PrefDialogs;
 import com.foobnix.pdf.info.widget.ShareDialog;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.DocumentController;
+import com.foobnix.pdf.info.wrapper.PasswordState;
 import com.foobnix.pdf.info.wrapper.UITab;
 import com.foobnix.sys.TempHolder;
 import com.foobnix.ui2.BooksService;
 import com.foobnix.ui2.MainTabs2;
+import com.foobnix.ui2.MyContextWrapper;
 import com.jmedeisis.draglinearlayout.DragLinearLayout;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.util.Pair;
+import android.support.v4.widget.DrawerLayout;
 import android.text.Html;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
@@ -60,10 +80,8 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
-import android.widget.RadioButton;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,8 +91,7 @@ public class PrefFragment2 extends UIFragment {
     private static final String WWW_SITE = "http://librera.mobi";
     private static final String WWW_BETA_SITE = "http://beta.librera.mobi";
     private static final String WWW_ARCHIVE_SITE = "http://archive.librera.mobi";
-    private SearchFragment searchFragmet;
-    private TextView curBrightness;
+    private TextView curBrightness, themeColor;
     private CheckBox isRememberDictionary;
 
     @Override
@@ -85,10 +102,6 @@ public class PrefFragment2 extends UIFragment {
     @Override
     public boolean isBackPressed() {
         return false;
-    }
-
-    @Override
-    public void onSelectFragment() {
     }
 
     @Override
@@ -112,11 +125,11 @@ public class PrefFragment2 extends UIFragment {
 
     }
 
-    View section1, section2, section3, section4, section5, section6, section7;
+    View section1, section2, section3, section4, section5, section6, section7, overlay;
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
-        final View inflate = inflater.inflate(R.layout.preferences, container, false);
+        inflate = inflater.inflate(R.layout.preferences, container, false);
 
         // tabs position
         final DragLinearLayout dragLinearLayout = (DragLinearLayout) inflate.findViewById(R.id.dragLinearLayout);
@@ -133,7 +146,7 @@ public class PrefFragment2 extends UIFragment {
                     ((TextView) library.findViewById(R.id.text1)).setText(tab.getName());
                     ((CheckBox) library.findViewById(R.id.isVisible)).setChecked(tab.isVisible());
                     ((ImageView) library.findViewById(R.id.image1)).setImageResource(tab.getIcon());
-                    TintUtil.setTintImage(((ImageView) library.findViewById(R.id.image1)), TintUtil.COLOR_TINT_GRAY);
+                    TintUtil.setTintImageWithAlpha(((ImageView) library.findViewById(R.id.image1)), TintUtil.COLOR_TINT_GRAY);
                     library.setTag(tab.getIndex());
                     dragLinearLayout.addView(library, layoutParams);
                 }
@@ -184,9 +197,16 @@ public class PrefFragment2 extends UIFragment {
 
             @Override
             public void onClick(View v) {
-                AppState.get().tabsOrder = AppState.DEFAULTS_TABS_ORDER;
-                isshowPrefAsMenu.setChecked(false);
-                dragLinear.run();
+                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults_full), new Runnable() {
+
+                    @Override
+                    public void run() {
+                        AppState.get().tabsOrder = AppState.DEFAULTS_TABS_ORDER;
+                        isshowPrefAsMenu.setChecked(false);
+                        dragLinear.run();
+                    }
+                });
+
             }
         });
 
@@ -204,7 +224,7 @@ public class PrefFragment2 extends UIFragment {
 
         final int max = Dips.pxToDp(Dips.screenMinWH() / 2) - 2 * 4;
 
-        CustomSeek coverSmallSize = (CustomSeek) inflate.findViewById(R.id.coverSmallSize);
+        final CustomSeek coverSmallSize = (CustomSeek) inflate.findViewById(R.id.coverSmallSize);
         coverSmallSize.init(40, max, AppState.get().coverSmallSize);
 
         coverSmallSize.setOnSeekChanged(new IntegerResponse() {
@@ -261,18 +281,44 @@ public class PrefFragment2 extends UIFragment {
                 p.show();
             }
         });
+        final TextView columsDefaul = (TextView) inflate.findViewById(R.id.columsDefaul);
+        TxtUtils.underlineTextView(columsDefaul);
+        columsDefaul.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults_full), new Runnable() {
+
+                    @Override
+                    public void run() {
+                        IMG.clearDiscCache();
+                        IMG.clearMemoryCache();
+                        AppState.get().coverBigSize = (int) (((Dips.screenWidthDP() / (Dips.screenWidthDP() / 120)) - 8) * (Dips.isXLargeScreen() ? 1.5f : 1));
+                        AppState.get().coverSmallSize = 80;
+                        TempHolder.listHash++;
+
+                        columsCount.setText("" + Dips.screenWidthDP() / AppState.get().coverBigSize);
+                        TxtUtils.underlineTextView(columsCount);
+
+                        coverSmallSize.init(40, max, AppState.get().coverSmallSize);
+                        coverBigSize.init(40, Math.max(max, AppState.get().coverBigSize), AppState.get().coverBigSize);
+                    }
+                });
+
+            }
+        });
 
         final ScrollView scrollView = (ScrollView) inflate.findViewById(R.id.scroll);
         scrollView.setVerticalScrollBarEnabled(false);
 
-        ((TextView) inflate.findViewById(R.id.section6)).setText(String.format("%s: %s", getString(R.string.product), AppsConfig.APP_NAME));
+        ((TextView) inflate.findViewById(R.id.section6)).setText(String.format("%s: %s", getString(R.string.product), AppsConfig.TXT_APP_NAME));
         // ((TextView) findViewById(R.id.appName)).setText(AppsConfig.APP_NAME);
 
         try {
             PackageInfo packageInfo = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0);
             final String version = packageInfo.versionName;
-            final int code = packageInfo.versionCode;
-            ((TextView) inflate.findViewById(R.id.pVersion)).setText(String.format("%s: %s-%s", getString(R.string.version), version, code));
+            ((TextView) inflate.findViewById(R.id.pVersion)).setText(String.format("%s: %s", getString(R.string.version), version));
         } catch (final NameNotFoundException e) {
         }
 
@@ -282,61 +328,76 @@ public class PrefFragment2 extends UIFragment {
 
             @Override
             public void onClick(View v) {
-                ((MainTabs2) getActivity()).closeActivity();
+                ((MainTabs2) getActivity()).showInterstial();
             }
         });
 
+        final TextView onFullScreen = (TextView) inflate.findViewById(R.id.fullscreen);
+        onFullScreen.setText(AppState.get().isFullScreenMain ? R.string.yes : R.string.no);
+        TxtUtils.underlineTextView(onFullScreen);
 
-        inflate.findViewById(R.id.onFullScreen).setOnClickListener(new OnClickListener() {
+        onFullScreen.setOnClickListener(new OnClickListener() {
 
             @Override
             public void onClick(final View v) {
-                AppState.getInstance().setFullScrean(!AppState.getInstance().isFullScrean());
-                DocumentController.chooseFullScreen(getActivity(), AppState.getInstance().isFullScrean());
-                fullScreenText();
+
+                MyPopupMenu popup = new MyPopupMenu(getActivity(), v);
+                popup.getMenu().add(R.string.yes).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        AppState.get().isFullScreenMain = true;
+
+                        onFullScreen.setText(R.string.yes);
+                        TxtUtils.underlineTextView(onFullScreen);
+                        DocumentController.chooseFullScreen(getActivity(), AppState.get().isFullScreenMain);
+                        return false;
+                    }
+                });
+
+                popup.getMenu().add(R.string.no).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        AppState.get().isFullScreenMain = false;
+
+                        onFullScreen.setText(R.string.no);
+                        TxtUtils.underlineTextView(onFullScreen);
+                        DocumentController.chooseFullScreen(getActivity(), AppState.get().isFullScreenMain);
+                        return false;
+                    }
+                });
+
+                popup.show();
 
             }
         });
 
-        final View onScreenMode = inflate.findViewById(R.id.onScreenMode);
-        onScreenMode.setOnClickListener(new OnClickListener() {
+        screenOrientation = (TextView) inflate.findViewById(R.id.screenOrientation);
+        screenOrientation.setText(DocumentController.getRotationText());
+        TxtUtils.underlineTextView(screenOrientation);
+
+        screenOrientation.setOnClickListener(new OnClickListener() {
 
             @Override
-            public void onClick(final View v) {
-                PopupMenu p = new PopupMenu(getContext(), onScreenMode);
-                p.getMenu().add(R.string.automatic).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+            public void onClick(View v) {
+                PopupMenu menu = new PopupMenu(v.getContext(), v);
+                for (int i = 0; i < DocumentController.orientationIds.size(); i++) {
+                    final int j = i;
+                    final int name = DocumentController.orientationTexts.get(i);
+                    menu.getMenu().add(name).setOnMenuItemClickListener(new OnMenuItemClickListener() {
 
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        AppState.getInstance().orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR;
-                        rotationText();
-                        DocumentController.doRotation(getActivity());
-                        return false;
-                    }
-                });
-                p.getMenu().add(R.string.landscape).setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        AppState.getInstance().orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
-                        rotationText();
-                        DocumentController.doRotation(getActivity());
-                        return false;
-                    }
-                });
-
-                p.getMenu().add(R.string.portrait).setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        AppState.getInstance().orientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
-                        rotationText();
-                        DocumentController.doRotation(getActivity());
-                        return false;
-                    }
-                });
-                p.show();
-
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            AppState.get().orientation = DocumentController.orientationIds.get(j);
+                            screenOrientation.setText(DocumentController.orientationTexts.get(j));
+                            TxtUtils.underlineTextView(screenOrientation);
+                            DocumentController.doRotation(getActivity());
+                            return false;
+                        }
+                    });
+                }
+                menu.show();
             }
         });
 
@@ -357,19 +418,32 @@ public class PrefFragment2 extends UIFragment {
                 new KeyCodeDialog(getActivity(), onCloseDialog);
             }
         });
-        final View theme = inflate.findViewById(R.id.themeColor);
-        theme.setOnClickListener(new OnClickListener() {
+
+        themeColor = (TextView) inflate.findViewById(R.id.themeColor);
+        themeColor.setOnClickListener(new OnClickListener() {
 
             @Override
             public void onClick(final View v) {
 
-                PopupMenu p = new PopupMenu(getContext(), theme);
+                PopupMenu p = new PopupMenu(getContext(), themeColor);
                 p.getMenu().add(R.string.light).setOnMenuItemClickListener(new OnMenuItemClickListener() {
 
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
-                        AppState.getInstance().isWhiteTheme = true;
+                        AppState.get().isWhiteTheme = true;
+                        AppState.get().isInkMode = false;
+
+                        AppState.get().contrastImage = 0;
+                        AppState.get().brigtnessImage = 0;
+                        AppState.get().bolderTextOnImage = false;
+                        AppState.get().isEnableBC = false;
+
+                        AppState.get().save(getActivity());
+
+                        IMG.clearDiscCache();
+                        IMG.clearMemoryCache();
                         onTheme();
+
                         return false;
                     }
                 });
@@ -377,12 +451,118 @@ public class PrefFragment2 extends UIFragment {
 
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
-                        AppState.getInstance().isWhiteTheme = false;
+                        AppState.get().isWhiteTheme = false;
+                        AppState.get().isInkMode = false;
+
+                        AppState.get().contrastImage = 0;
+                        AppState.get().brigtnessImage = 0;
+                        AppState.get().bolderTextOnImage = false;
+                        AppState.get().isEnableBC = false;
+
+                        AppState.get().save(getActivity());
+
+                        IMG.clearDiscCache();
+                        IMG.clearMemoryCache();
+
                         onTheme();
                         return false;
                     }
                 });
+                p.getMenu().add("Ink").setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+
+                        IMG.clearDiscCache();
+                        IMG.clearMemoryCache();
+
+                        onEink();
+                        return false;
+                    }
+                });
                 p.show();
+            }
+        });
+
+        final TextView hypenLang = (TextView) inflate.findViewById(R.id.appLang);
+        hypenLang.setText(DialogTranslateFromTo.getLanuageByCode(AppState.get().appLang));
+        TxtUtils.underlineTextView(hypenLang);
+
+        hypenLang.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                final PopupMenu popupMenu = new PopupMenu(v.getContext(), v);
+
+                final List<String> codes = Arrays.asList(//
+                        "en", "ar", "de", "es", "fa", "fi", "fr", "he", //
+                        "hi", "hu", "id", "it", "ja", "ko", "la", "lt", //
+                        "nl", "no", "pl", "pt", "ro", "ru", "sk", "sv", //
+                        "sw", "th", "tr", "uk", "vi", "zh");
+                List<String> langs = new ArrayList<String>();
+                for (String code : codes) {
+                    langs.add(DialogTranslateFromTo.getLanuageByCode(code) + ":" + code);
+                }
+                Collections.sort(langs);
+
+                popupMenu.getMenu().add(R.string.system_language).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        TxtUtils.underlineTextView(hypenLang);
+                        AppState.get().appLang = AppState.MY_SYSTEM_LANG;
+                        TempHolder.get().forseAppLang = true;
+                        MyContextWrapper.wrap(getContext());
+                        AppState.get().save(getActivity());
+                        onTheme();
+                        return false;
+                    }
+                });
+
+                for (int i = 0; i < langs.size(); i++) {
+                    String all[] = langs.get(i).split(":");
+                    final String name = all[0];
+                    final String code = all[1];
+                    popupMenu.getMenu().add(name).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            AppState.get().appLang = code;
+                            TxtUtils.underlineTextView(hypenLang);
+                            AppState.get().save(getActivity());
+                            onTheme();
+                            return false;
+                        }
+                    });
+                }
+                popupMenu.show();
+
+            }
+        });
+
+        final TextView appFontScale = (TextView) inflate.findViewById(R.id.appFontScale);
+        appFontScale.setText(getFontName(AppState.get().appFontScale));
+        TxtUtils.underlineTextView(appFontScale);
+        appFontScale.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                final PopupMenu popupMenu = new PopupMenu(v.getContext(), v);
+                for (float i = 0.7f; i < 2.1f; i += 0.1) {
+                    final float number = i;
+                    popupMenu.getMenu().add(getFontName(number)).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            AppState.get().appFontScale = number;
+                            AppState.get().save(getActivity());
+                            onTheme();
+                            return false;
+                        }
+                    });
+                }
+                popupMenu.show();
             }
         });
 
@@ -397,35 +577,578 @@ public class PrefFragment2 extends UIFragment {
             }
         });
 
-        CheckBox isFirstSurname = (CheckBox) inflate.findViewById(R.id.isFirstSurname);
+        rememberMode = (CheckBox) inflate.findViewById(R.id.isRememberMode);
+        rememberMode.setChecked(AppState.get().isRememberMode);
+        rememberMode.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isRememberMode = isChecked;
+            }
+        });
+
+        selectedOpenMode = (TextView) inflate.findViewById(R.id.selectedOpenMode);
+        selectedOpenMode.setOnClickListener(new OnClickListener() {
+
+            @SuppressLint("NewApi")
+            @Override
+            public void onClick(View v) {
+
+                if (Build.VERSION.SDK_INT <= 10) {
+                    Toast.makeText(selectedOpenMode.getContext(), R.string.this_function_will_works_in_modern_android, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                final PopupMenu popupMenu = new PopupMenu(selectedOpenMode.getContext(), selectedOpenMode);
+
+                final MenuItem advanced_mode = popupMenu.getMenu().add(AppState.get().nameVerticalMode);
+                advanced_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(final MenuItem item) {
+                        AppState.get().isAlwaysOpenAsMagazine = false;
+                        AppState.get().isMusicianMode = false;
+                        checkOpenWithSpinner();
+                        return false;
+                    }
+                });
+
+                final MenuItem easy_mode = popupMenu.getMenu().add(AppState.get().nameHorizontalMode);
+                easy_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(final MenuItem item) {
+                        AppState.get().isAlwaysOpenAsMagazine = true;
+                        AppState.get().isMusicianMode = false;
+                        checkOpenWithSpinner();
+                        return false;
+                    }
+                });
+                final MenuItem music_mode = popupMenu.getMenu().add(AppState.get().nameMusicianMode);
+                music_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(final MenuItem item) {
+                        AppState.get().isAlwaysOpenAsMagazine = false;
+                        AppState.get().isMusicianMode = true;
+                        checkOpenWithSpinner();
+                        return false;
+                    }
+                });
+                popupMenu.show();
+
+            }
+        });
+
+        checkOpenWithSpinner();
+
+        final CheckBox isCropBookCovers = (CheckBox) inflate.findViewById(R.id.isCropBookCovers);
+        isCropBookCovers.setOnCheckedChangeListener(null);
+        isCropBookCovers.setChecked(AppState.get().isCropBookCovers);
+        isCropBookCovers.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isCropBookCovers = isChecked;
+                TempHolder.listHash++;
+
+            }
+        });
+
+        final CheckBox isBookCoverEffect = (CheckBox) inflate.findViewById(R.id.isBookCoverEffect);
+        isBookCoverEffect.setOnCheckedChangeListener(null);
+        isBookCoverEffect.setChecked(AppState.get().isBookCoverEffect);
+        isBookCoverEffect.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isBookCoverEffect = isChecked;
+                ImageLoader.getInstance().clearMemoryCache();
+                ImageLoader.getInstance().clearDiskCache();
+                TempHolder.listHash++;
+                if (isChecked) {
+                    isCropBookCovers.setEnabled(false);
+                    isCropBookCovers.setChecked(true);
+                } else {
+                    isCropBookCovers.setEnabled(true);
+                }
+            }
+        });
+
+        final CheckBox isBorderAndShadow = (CheckBox) inflate.findViewById(R.id.isBorderAndShadow);
+        isBorderAndShadow.setOnCheckedChangeListener(null);
+        isBorderAndShadow.setChecked(AppState.get().isBorderAndShadow);
+        isBorderAndShadow.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isBorderAndShadow = isChecked;
+                TempHolder.listHash++;
+
+            }
+        });
+
+        final CheckBox isShowImages = (CheckBox) inflate.findViewById(R.id.isShowImages);
+        isShowImages.setOnCheckedChangeListener(null);
+        isShowImages.setChecked(AppState.get().isShowImages);
+        isShowImages.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isShowImages = isChecked;
+                TempHolder.listHash++;
+                isCropBookCovers.setEnabled(AppState.get().isShowImages);
+                isBookCoverEffect.setEnabled(AppState.get().isShowImages);
+                isBorderAndShadow.setEnabled(AppState.get().isShowImages);
+
+            }
+        });
+        isCropBookCovers.setEnabled(AppState.get().isShowImages);
+        isBookCoverEffect.setEnabled(AppState.get().isShowImages);
+        isBorderAndShadow.setEnabled(AppState.get().isShowImages);
+
+        CheckBox isLoopAutoplay = (CheckBox) inflate.findViewById(R.id.isLoopAutoplay);
+        isLoopAutoplay.setChecked(AppState.get().isLoopAutoplay);
+        isLoopAutoplay.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isLoopAutoplay = isChecked;
+            }
+        });
+
+        CheckBox isOpenLastBook = (CheckBox) inflate.findViewById(R.id.isOpenLastBook);
+        isOpenLastBook.setChecked(AppState.get().isOpenLastBook);
+        isOpenLastBook.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isOpenLastBook = isChecked;
+            }
+        });
+
+        CheckBox isShowCloseAppDialog = (CheckBox) inflate.findViewById(R.id.isShowCloseAppDialog);
+        isShowCloseAppDialog.setChecked(AppState.get().isShowCloseAppDialog);
+        isShowCloseAppDialog.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isShowCloseAppDialog = isChecked;
+            }
+        });
+
+        final Handler handler = new Handler();
+        final Runnable ask = new Runnable() {
+
+            @Override
+            public void run() {
+                AlertDialogs.showDialog(getActivity(), getActivity().getString(R.string.you_need_to_update_the_library), getString(R.string.ok), new Runnable() {
+
+                    @Override
+                    public void run() {
+                        onScan();
+                    }
+                }, null);
+            }
+        };
+        final int timeout = 1000;
+
+        ////
+        ((CheckBox) inflate.findViewById(R.id.supportPDF)).setChecked(AppState.get().supportPDF);
+        ((CheckBox) inflate.findViewById(R.id.supportPDF)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportPDF = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportXPS)).setChecked(AppState.get().supportXPS);
+        ((CheckBox) inflate.findViewById(R.id.supportXPS)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportXPS = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportDJVU)).setChecked(AppState.get().supportDJVU);
+        ((CheckBox) inflate.findViewById(R.id.supportDJVU)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportDJVU = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+        ((CheckBox) inflate.findViewById(R.id.supportEPUB)).setChecked(AppState.get().supportEPUB);
+        ((CheckBox) inflate.findViewById(R.id.supportEPUB)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportEPUB = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+        ((CheckBox) inflate.findViewById(R.id.supportFB2)).setChecked(AppState.get().supportFB2);
+        ((CheckBox) inflate.findViewById(R.id.supportFB2)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportFB2 = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportTXT)).setChecked(AppState.get().supportTXT);
+        ((CheckBox) inflate.findViewById(R.id.supportTXT)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportTXT = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportMOBI)).setChecked(AppState.get().supportMOBI);
+        ((CheckBox) inflate.findViewById(R.id.supportMOBI)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportMOBI = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportRTF)).setChecked(AppState.get().supportRTF);
+        ((CheckBox) inflate.findViewById(R.id.supportRTF)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportRTF = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        ((CheckBox) inflate.findViewById(R.id.supportCBZ)).setChecked(AppState.get().supportCBZ);
+        ((CheckBox) inflate.findViewById(R.id.supportCBZ)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportCBZ = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        CheckBox supportZIP = (CheckBox) inflate.findViewById(R.id.supportZIP);
+        supportZIP.setChecked(AppState.get().supportZIP);
+        supportZIP.setText(getString(R.string.archives) + " (ZIP/RAR/...)");
+        supportZIP.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportZIP = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        CheckBox supportOther = (CheckBox) inflate.findViewById(R.id.supportOther);
+        supportOther.setChecked(AppState.get().supportOther);
+        supportOther.setText(getString(R.string.other) + " (DOC/CHM/...)");
+        supportOther.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().supportOther = isChecked;
+                ExtUtils.updateSearchExts();
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        final CheckBox isFirstSurname = (CheckBox) inflate.findViewById(R.id.isFirstSurname);
         isFirstSurname.setChecked(AppState.get().isFirstSurname);
         isFirstSurname.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
                 AppState.get().isFirstSurname = isChecked;
+                handler.removeCallbacks(ask);
+                handler.postDelayed(ask, timeout);
+            }
+        });
+
+        CheckBox isDisplayAllFilesInFolder = (CheckBox) inflate.findViewById(R.id.isDisplayAllFilesInFolder);
+        isDisplayAllFilesInFolder.setChecked(AppState.get().isDisplayAllFilesInFolder);
+        isDisplayAllFilesInFolder.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isDisplayAllFilesInFolder = isChecked;
+                TempHolder.listHash++;
+            }
+        });
+        // app password
+        final CheckBox isAppPassword = (CheckBox) inflate.findViewById(R.id.isAppPassword);
+        isAppPassword.setChecked(PasswordState.get().isAppPassword);
+        isAppPassword.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                PasswordState.get().isAppPassword = isChecked;
+                if (isChecked && TxtUtils.isEmpty(PasswordState.get().appPassword)) {
+                    PasswordDialog.showDialog(getActivity(), true, new Runnable() {
+
+                        @Override
+                        public void run() {
+                            if (TxtUtils.isEmpty(PasswordState.get().appPassword)) {
+                                isAppPassword.setChecked(false);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        TxtUtils.underlineTextView((TextView) inflate.findViewById(R.id.appPassword)).setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                PasswordDialog.showDialog(getActivity(), true, new Runnable() {
+
+                    @Override
+                    public void run() {
+                        if (TxtUtils.isEmpty(PasswordState.get().appPassword)) {
+                            isAppPassword.setChecked(false);
+                        }
+                    }
+                });
+            }
+        });
+
+        // What is new
+        CheckBox showWhatIsNew = (CheckBox) inflate.findViewById(R.id.isShowWhatIsNewDialog);
+        showWhatIsNew.setChecked(AppState.get().isShowWhatIsNewDialog);
+        showWhatIsNew.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+                AppState.get().isShowWhatIsNewDialog = isChecked;
+            }
+        });
+
+        final TextView whatIsNew = (TextView) inflate.findViewById(R.id.whatIsNew);
+        whatIsNew.setText(getActivity().getString(R.string.what_is_new_in) + " " + Apps.getApplicationName(getActivity()) + " " + Apps.getVersionName(getActivity()));
+        TxtUtils.underlineTextView(whatIsNew);
+        whatIsNew.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                AndroidWhatsNew.show(getActivity());
 
             }
         });
 
-        autoSettings = (CheckBox) inflate.findViewById(R.id.autoSettings);
-        autoSettings.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        ///
+
+        // BrightnessHelper.controlsWrapper(inflate, getActivity());
+
+        nextKeys = (TextView) inflate.findViewById(R.id.textNextKeys);
+        prevKeys = (TextView) inflate.findViewById(R.id.textPrevKeys);
+
+        ch = (CheckBox) inflate.findViewById(R.id.onReverse);
+        ch.setOnCheckedChangeListener(null);
+        ch.setChecked(AppState.get().isReverseKeys);
+        ch.setOnCheckedChangeListener(reverseListener);
+
+        inflate.findViewById(R.id.onColorChoser).setOnClickListener(new OnClickListener() {
 
             @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                onDefaultBr(isChecked);
-                saveChanges();
+            public void onClick(final View v) {
+            }
+        });
+        initKeys();
+
+        searchPaths = (TextView) inflate.findViewById(R.id.searchPaths);
+        searchPaths.setText(TxtUtils.underline(AppState.get().searchPaths.replace(",", "<br>")));
+        searchPaths.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                onFolderConfigDialog();
             }
         });
 
-        rememberMode = (CheckBox) inflate.findViewById(R.id.isRememberMode);
-        rememberMode.setChecked(AppState.getInstance().isRememberMode);
-        rememberMode.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        TextView addFolder = (TextView) inflate.findViewById(R.id.onConfigPath);
+        TxtUtils.underlineTextView(addFolder);
+        addFolder.setOnClickListener(new View.OnClickListener() {
 
             @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isRememberMode = isChecked;
+            public void onClick(final View v) {
+                onFolderConfigDialog();
             }
+        });
+
+        TxtUtils.underlineTextView((TextView) inflate.findViewById(R.id.importButton)).setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(final View v) {
+                PrefDialogs.importDialog(getActivity());
+            }
+        });
+
+        TxtUtils.underlineTextView((TextView) inflate.findViewById(R.id.exportButton)).setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(final View v) {
+                PrefDialogs.exportDialog(getActivity());
+            }
+        });
+
+        final CheckBox isAutomaticExport = (CheckBox) inflate.findViewById(R.id.isAutomaticExport);
+        isAutomaticExport.setChecked(AppState.get().isAutomaticExport);
+        isAutomaticExport.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                AppState.get().isAutomaticExport = isChecked;
+            }
+        });
+        // folders
+
+        final TextView fontFolder = (TextView) inflate.findViewById(R.id.fontFolder);
+        TxtUtils.underline(fontFolder, TxtUtils.lastTwoPath(BookCSS.get().fontFolder));
+        fontFolder.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                ChooserDialogFragment.chooseFolder(getActivity(), BookCSS.get().fontFolder).setOnSelectListener(new ResultResponse2<String, Dialog>() {
+                    @Override
+                    public boolean onResultRecive(String nPath, Dialog dialog) {
+                        BookCSS.get().fontFolder = nPath;
+                        TxtUtils.underline(fontFolder, TxtUtils.lastTwoPath(BookCSS.get().fontFolder));
+                        dialog.dismiss();
+                        return false;
+                    }
+                });
+            }
+        });
+
+        final TextView downloadFolder = (TextView) inflate.findViewById(R.id.downloadFolder);
+        TxtUtils.underline(downloadFolder, TxtUtils.lastTwoPath(AppState.get().downlodsPath));
+        downloadFolder.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                ChooserDialogFragment.chooseFolder(getActivity(), AppState.get().downlodsPath).setOnSelectListener(new ResultResponse2<String, Dialog>() {
+                    @Override
+                    public boolean onResultRecive(String nPath, Dialog dialog) {
+                        AppState.get().downlodsPath = nPath;
+                        TxtUtils.underline(downloadFolder, TxtUtils.lastTwoPath(AppState.get().downlodsPath));
+                        dialog.dismiss();
+                        return false;
+                    }
+                });
+            }
+        });
+
+        final TextView ttsFolder = (TextView) inflate.findViewById(R.id.ttsFolder);
+        TxtUtils.underline(ttsFolder, TxtUtils.lastTwoPath(AppState.get().ttsSpeakPath));
+        ttsFolder.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                ChooserDialogFragment.chooseFolder(getActivity(), AppState.get().ttsSpeakPath).setOnSelectListener(new ResultResponse2<String, Dialog>() {
+                    @Override
+                    public boolean onResultRecive(String nPath, Dialog dialog) {
+                        AppState.get().ttsSpeakPath = nPath;
+                        TxtUtils.underline(ttsFolder, TxtUtils.lastTwoPath(AppState.get().ttsSpeakPath));
+                        dialog.dismiss();
+                        return false;
+                    }
+                });
+            }
+        });
+
+        final TextView backupPath = (TextView) inflate.findViewById(R.id.backupFolder);
+        TxtUtils.underline(backupPath, TxtUtils.lastTwoPath(AppState.get().backupPath));
+        backupPath.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                ChooserDialogFragment.chooseFolder(getActivity(), AppState.get().backupPath).setOnSelectListener(new ResultResponse2<String, Dialog>() {
+                    @Override
+                    public boolean onResultRecive(String nPath, Dialog dialog) {
+                        AppState.get().backupPath = nPath;
+                        TxtUtils.underline(backupPath, TxtUtils.lastTwoPath(AppState.get().backupPath));
+                        dialog.dismiss();
+                        return false;
+                    }
+                });
+            }
+        });
+
+        // Widget Configuration
+
+        final TextView widgetLayout = (TextView) inflate.findViewById(R.id.widgetLayout);
+        widgetLayout.setText(AppState.get().widgetType == AppState.WIDGET_LIST ? R.string.list : R.string.grid);
+        TxtUtils.underlineTextView(widgetLayout);
+
+        widgetLayout.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                final PopupMenu popupMenu = new PopupMenu(v.getContext(), v);
+
+                final MenuItem recent = popupMenu.getMenu().add(R.string.list);
+                recent.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(final MenuItem item) {
+                        AppState.get().widgetType = AppState.WIDGET_LIST;
+                        widgetLayout.setText(R.string.list);
+                        TxtUtils.underlineTextView(widgetLayout);
+                        return false;
+                    }
+                });
+
+                final MenuItem starred = popupMenu.getMenu().add(R.string.grid);
+                starred.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(final MenuItem item) {
+                        AppState.get().widgetType = AppState.WIDGET_GRID;
+                        widgetLayout.setText(R.string.grid);
+                        TxtUtils.underlineTextView(widgetLayout);
+                        return false;
+                    }
+                });
+
+                popupMenu.show();
+
+            }
+
         });
 
         final TextView widgetForRecent = (TextView) inflate.findViewById(R.id.widgetForRecent);
@@ -468,394 +1191,8 @@ public class PrefFragment2 extends UIFragment {
 
         });
 
-        selectedOpenMode = (TextView) inflate.findViewById(R.id.selectedOpenMode);
-        selectedOpenMode.setOnClickListener(new OnClickListener() {
-
-            @SuppressLint("NewApi")
-            @Override
-            public void onClick(View v) {
-
-                if (Build.VERSION.SDK_INT <= 10) {
-                    Toast.makeText(selectedOpenMode.getContext(), R.string.this_function_will_works_in_modern_android, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                final PopupMenu popupMenu = new PopupMenu(selectedOpenMode.getContext(), selectedOpenMode);
-
-                final MenuItem advanced_mode = popupMenu.getMenu().add(R.string.advanced_mode);
-                advanced_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                    @Override
-                    public boolean onMenuItemClick(final MenuItem item) {
-                        AppState.getInstance().isAlwaysOpenAsMagazine = false;
-                        AppState.getInstance().isMusicianMode = false;
-                        checkOpenWithSpinner();
-                        return false;
-                    }
-                });
-
-                final MenuItem easy_mode = popupMenu.getMenu().add(R.string.easy_mode);
-                easy_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                    @Override
-                    public boolean onMenuItemClick(final MenuItem item) {
-                        AppState.getInstance().isAlwaysOpenAsMagazine = true;
-                        AppState.getInstance().isMusicianMode = false;
-                        checkOpenWithSpinner();
-                        return false;
-                    }
-                });
-                final MenuItem music_mode = popupMenu.getMenu().add(R.string.music_mode);
-                music_mode.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                    @Override
-                    public boolean onMenuItemClick(final MenuItem item) {
-                        AppState.getInstance().isAlwaysOpenAsMagazine = false;
-                        AppState.getInstance().isMusicianMode = true;
-                        checkOpenWithSpinner();
-                        return false;
-                    }
-                });
-                popupMenu.show();
-
-            }
-        });
-
-        checkOpenWithSpinner();
-
-
-
-        final CheckBox isCropBookCovers = (CheckBox) inflate.findViewById(R.id.isCropBookCovers);
-        isCropBookCovers.setOnCheckedChangeListener(null);
-        isCropBookCovers.setChecked(AppState.getInstance().isCropBookCovers);
-        isCropBookCovers.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isCropBookCovers = isChecked;
-                TempHolder.listHash++;
-
-            }
-        });
-
-        final CheckBox isBookCoverEffect = (CheckBox) inflate.findViewById(R.id.isBookCoverEffect);
-        isBookCoverEffect.setOnCheckedChangeListener(null);
-        isBookCoverEffect.setChecked(AppState.getInstance().isBookCoverEffect);
-        isBookCoverEffect.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isBookCoverEffect = isChecked;
-                ImageLoader.getInstance().clearMemoryCache();
-                ImageLoader.getInstance().clearDiskCache();
-                TempHolder.listHash++;
-                if (isChecked) {
-                    isCropBookCovers.setEnabled(false);
-                    isCropBookCovers.setChecked(true);
-                } else {
-                    isCropBookCovers.setEnabled(true);
-                }
-            }
-        });
-
-        final CheckBox isBorderAndShadow = (CheckBox) inflate.findViewById(R.id.isBorderAndShadow);
-        isBorderAndShadow.setOnCheckedChangeListener(null);
-        isBorderAndShadow.setChecked(AppState.getInstance().isBorderAndShadow);
-        isBorderAndShadow.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isBorderAndShadow = isChecked;
-                TempHolder.listHash++;
-
-            }
-        });
-
-        final CheckBox isShowImages = (CheckBox) inflate.findViewById(R.id.isShowImages);
-        isShowImages.setOnCheckedChangeListener(null);
-        isShowImages.setChecked(AppState.getInstance().isShowImages);
-        isShowImages.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isShowImages = isChecked;
-                TempHolder.listHash++;
-                isCropBookCovers.setEnabled(AppState.getInstance().isShowImages);
-                isBookCoverEffect.setEnabled(AppState.getInstance().isShowImages);
-                isBorderAndShadow.setEnabled(AppState.getInstance().isShowImages);
-
-            }
-        });
-        isCropBookCovers.setEnabled(AppState.getInstance().isShowImages);
-        isBookCoverEffect.setEnabled(AppState.getInstance().isShowImages);
-        isBorderAndShadow.setEnabled(AppState.getInstance().isShowImages);
-
-        CheckBox isLoopAutoplay = (CheckBox) inflate.findViewById(R.id.isLoopAutoplay);
-        isLoopAutoplay.setChecked(AppState.getInstance().isLoopAutoplay);
-        isLoopAutoplay.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isLoopAutoplay = isChecked;
-            }
-        });
-
-        CheckBox isOpenLastBook = (CheckBox) inflate.findViewById(R.id.isOpenLastBook);
-        isOpenLastBook.setChecked(AppState.getInstance().isOpenLastBook);
-        isOpenLastBook.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isOpenLastBook = isChecked;
-            }
-        });
-
-        CheckBox isShowCloseAppDialog = (CheckBox) inflate.findViewById(R.id.isShowCloseAppDialog);
-        isShowCloseAppDialog.setChecked(AppState.getInstance().isShowCloseAppDialog);
-        isShowCloseAppDialog.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isShowCloseAppDialog = isChecked;
-            }
-        });
-
-        ////
-        ((CheckBox) inflate.findViewById(R.id.supportPDF)).setChecked(AppState.getInstance().supportPDF);
-        ((CheckBox) inflate.findViewById(R.id.supportPDF)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportPDF = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportXPS)).setChecked(AppState.getInstance().supportXPS);
-        ((CheckBox) inflate.findViewById(R.id.supportXPS)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportXPS = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportDJVU)).setChecked(AppState.getInstance().supportDJVU);
-        ((CheckBox) inflate.findViewById(R.id.supportDJVU)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportDJVU = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-        ((CheckBox) inflate.findViewById(R.id.supportEPUB)).setChecked(AppState.getInstance().supportEPUB);
-        ((CheckBox) inflate.findViewById(R.id.supportEPUB)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportEPUB = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-        ((CheckBox) inflate.findViewById(R.id.supportFB2)).setChecked(AppState.getInstance().supportFB2);
-        ((CheckBox) inflate.findViewById(R.id.supportFB2)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportFB2 = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportTXT)).setChecked(AppState.getInstance().supportTXT);
-        ((CheckBox) inflate.findViewById(R.id.supportTXT)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportTXT = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportMOBI)).setChecked(AppState.getInstance().supportMOBI);
-        ((CheckBox) inflate.findViewById(R.id.supportMOBI)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportMOBI = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportRTF)).setChecked(AppState.getInstance().supportRTF);
-        ((CheckBox) inflate.findViewById(R.id.supportRTF)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportRTF = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportCBZ)).setChecked(AppState.getInstance().supportCBZ);
-        ((CheckBox) inflate.findViewById(R.id.supportCBZ)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportCBZ = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportZIP)).setChecked(AppState.getInstance().supportZIP);
-        ((CheckBox) inflate.findViewById(R.id.supportZIP)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportZIP = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-
-        ((CheckBox) inflate.findViewById(R.id.supportOther)).setChecked(AppState.getInstance().supportOther);
-        ((CheckBox) inflate.findViewById(R.id.supportOther)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().supportOther = isChecked;
-                ExtUtils.updateSearchExts();
-            }
-        });
-        // What is new
-        ((CheckBox) inflate.findViewById(R.id.isShowWhatIsNewDialog)).setChecked(AppState.getInstance().isShowWhatIsNewDialog);
-        ((CheckBox) inflate.findViewById(R.id.isShowWhatIsNewDialog)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isShowWhatIsNewDialog = isChecked;
-            }
-        });
-        final TextView whatIsNew = (TextView) inflate.findViewById(R.id.whatIsNew);
-        TxtUtils.underlineTextView(whatIsNew);
-        whatIsNew.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                AndroidWhatsNew.show(getActivity());
-
-            }
-        });
-
-        ///
-
-        final SeekBar mouseSpeed = (SeekBar) inflate.findViewById(R.id.seekWheelSpeed);
-        mouseSpeed.setMax(200);
-        mouseSpeed.setProgress(AppState.getInstance().mouseWheelSpeed);
-        mouseSpeed.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
-
-            @Override
-            public void onStopTrackingTouch(final SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStartTrackingTouch(final SeekBar seekBar) {
-            }
-
-            @Override
-            public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
-                AppState.getInstance().mouseWheelSpeed = progress;
-                LOG.d("TEST", "SET speed" + progress);
-            }
-        });
-
-        curBrightness = (TextView) inflate.findViewById(R.id.curBrigtness);
-        bar = (SeekBar) inflate.findViewById(R.id.seekBrightness);
-
-        initBrigtness();
-
-        nextKeys = (TextView) inflate.findViewById(R.id.textNextKeys);
-        prevKeys = (TextView) inflate.findViewById(R.id.textPrevKeys);
-
-        ch = (CheckBox) inflate.findViewById(R.id.onReverse);
-        ch.setOnCheckedChangeListener(null);
-        ch.setChecked(AppState.getInstance().isReverseKeys);
-        ch.setOnCheckedChangeListener(reverseListener);
-
-        inflate.findViewById(R.id.onColorChoser).setOnClickListener(new OnClickListener() {
-
-            @Override
-            public void onClick(final View v) {
-            }
-        });
-        initKeys();
-
-        searchPaths = (TextView) inflate.findViewById(R.id.searchPaths);
-        searchPaths.setText(TxtUtils.underline(AppState.getInstance().searchPaths.replace(",", "<br>")));
-        searchPaths.setOnClickListener(new OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                onFolderConfigDialog();
-            }
-        });
-
-        inflate.findViewById(R.id.onConfigPath).setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(final View v) {
-                onFolderConfigDialog();
-            }
-        });
-
-        TxtUtils.underlineTextView((TextView) inflate.findViewById(R.id.importButton)).setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(final View v) {
-                PrefDialogs.importDialog(getActivity());
-            }
-        });
-
-        TxtUtils.underlineTextView((TextView) inflate.findViewById(R.id.exportButton)).setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(final View v) {
-                PrefDialogs.exportDialog(getActivity());
-            }
-        });
-
-        // Widget Configuration
-
-        final RadioButton widgetList = (RadioButton) inflate.findViewById(R.id.checkBoxWigetList);
-        final RadioButton widgetGrid = (RadioButton) inflate.findViewById(R.id.checkBoxWidgetGrid);
-
-        if (Build.VERSION.SDK_INT <= 15) {
-            widgetGrid.setVisibility(View.GONE);
-        }
-        widgetList.setChecked(AppState.getInstance().widgetType == AppState.WIDGET_LIST);
-        widgetList.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                if (isChecked) {
-                    AppState.getInstance().widgetType = AppState.WIDGET_LIST;
-                }
-            }
-        });
-
-        widgetGrid.setChecked(AppState.getInstance().widgetType == AppState.WIDGET_GRID);
-        widgetGrid.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                if (isChecked) {
-                    AppState.getInstance().widgetType = AppState.WIDGET_GRID;
-                }
-            }
-        });
-
         final TextView widgetItemsCount = (TextView) inflate.findViewById(R.id.widgetItemsCount);
-        widgetItemsCount.setText("" + AppState.getInstance().widgetItemsCount);
+        widgetItemsCount.setText("" + AppState.get().widgetItemsCount);
         TxtUtils.underlineTextView(widgetItemsCount);
         widgetItemsCount.setOnClickListener(new OnClickListener() {
 
@@ -869,7 +1206,7 @@ public class PrefFragment2 extends UIFragment {
 
                         @Override
                         public boolean onMenuItemClick(MenuItem item) {
-                            AppState.getInstance().widgetItemsCount = k;
+                            AppState.get().widgetItemsCount = k;
                             widgetItemsCount.setText("" + k);
                             TxtUtils.underlineTextView(widgetItemsCount);
                             return false;
@@ -882,24 +1219,13 @@ public class PrefFragment2 extends UIFragment {
         });
 
         // dictionary
-        widgetGrid.setChecked(AppState.getInstance().widgetType == AppState.WIDGET_GRID);
-        widgetGrid.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                if (isChecked) {
-                    AppState.getInstance().widgetType = AppState.WIDGET_GRID;
-                }
-            }
-        });
-
         isRememberDictionary = (CheckBox) inflate.findViewById(R.id.isRememberDictionary);
-        isRememberDictionary.setChecked(AppState.getInstance().isRememberDictionary);
+        isRememberDictionary.setChecked(AppState.get().isRememberDictionary);
         isRememberDictionary.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                AppState.getInstance().isRememberDictionary = isChecked;
+                AppState.get().isRememberDictionary = isChecked;
             }
         });
 
@@ -980,20 +1306,6 @@ public class PrefFragment2 extends UIFragment {
             }
         });
 
-        inflate.findViewById(R.id.iconRandom).setOnClickListener(new OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                TintUtil.tintRandomColor();
-                onTintChanged();
-                sendNotifyTintChanged();
-
-                AppState.get().save(getActivity());
-
-                TempHolder.listHash++;
-            }
-        });
-
         LinearLayout colorsLine = (LinearLayout) inflate.findViewById(R.id.colorsLine);
         colorsLine.removeAllViews();
 
@@ -1054,6 +1366,24 @@ public class PrefFragment2 extends UIFragment {
                     }
                 }).show();
 
+            }
+        });
+
+        underline(inflate.findViewById(R.id.onContrast)).setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(final View v) {
+                Dialogs.showContrastDialogByUrl(getActivity(), new Runnable() {
+
+                    @Override
+                    public void run() {
+                        ImageLoader.getInstance().clearDiskCache();
+                        ImageLoader.getInstance().clearMemoryCache();
+                        TempHolder.listHash++;
+                        notifyFragment();
+
+                    }
+                });
             }
         });
 
@@ -1156,23 +1486,14 @@ public class PrefFragment2 extends UIFragment {
 
         // tutorials
 
-        final String displayLanguage = Urls.getLangCode();
-        boolean containsKey = AppState.getUserGuides().containsKey(displayLanguage);
-
         TextView tutorialLink = (TextView) inflate.findViewById(R.id.tutorialLink);
-        LinearLayout tutorialLayout = (LinearLayout) inflate.findViewById(R.id.tutorialLayout);
-        tutorialLayout.setVisibility(containsKey ? View.VISIBLE : View.GONE);
-        section5.setVisibility(containsKey ? View.VISIBLE : View.GONE);
-
-        final String web = "http://" + displayLanguage + ".librera.mobi";
-        tutorialLink.setText(web);
+        TxtUtils.underlineTextView(tutorialLink);
 
         tutorialLink.setOnClickListener(new OnClickListener() {
 
             @Override
             public void onClick(View v) {
-
-                Urls.open(getActivity(), web);
+                Urls.open(getActivity(), AndroidWhatsNew.DETAIL_URL_RU);
             }
         });
 
@@ -1201,7 +1522,15 @@ public class PrefFragment2 extends UIFragment {
                         dialog.dismiss();
                     }
                 });
-                alert.show();
+                AlertDialog create = alert.create();
+                create.setOnDismissListener(new OnDismissListener() {
+
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        Keyboards.hideNavigation(getActivity());
+                    }
+                });
+                create.show();
             }
         });
 
@@ -1236,7 +1565,25 @@ public class PrefFragment2 extends UIFragment {
             }
         });
 
+        overlay = getActivity().findViewById(R.id.overlay);
+
         return inflate;
+
+    }
+
+    private void onEink() {
+        AppState.get().isInkMode = true;
+        AppState.get().isWhiteTheme = true;
+        AppState.get().defaults(getActivity());
+        AppState.get().blueLightAlpha = 0;
+
+        onTintChanged();
+        sendNotifyTintChanged();
+
+        AppState.get().save(getActivity());
+
+        getActivity().finish();
+        MainTabs2.startActivity(getActivity(), TempHolder.get().currentTab);
 
     }
 
@@ -1244,30 +1591,12 @@ public class PrefFragment2 extends UIFragment {
 
         @Override
         public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-            AppState.getInstance().isReverseKeys = isChecked;
+            AppState.get().isReverseKeys = isChecked;
             initKeys();
             saveChanges();
             LOG.d("Save Changes", 3);
         }
     };
-
-    public void initBrigtness() {
-        float curBr = AppState.getInstance().brightness;
-        if (curBr < 0) {
-            curBr = DocumentController.getSystemBrigtness(getActivity());
-            bar.setEnabled(false);
-            autoSettings.setChecked(true);
-        } else {
-            autoSettings.setChecked(false);
-            bar.setOnSeekBarChangeListener(onSeek);
-            bar.setEnabled(true);
-        }
-
-        bar.setMax(100);
-        final int intBrightness = (int) (curBr * 100);
-        bar.setProgress(intBrightness);
-        curBrightness.setText("" + intBrightness);
-    }
 
     public View underline(View text) {
         CharSequence myText = ((TextView) text).getText();
@@ -1276,26 +1605,26 @@ public class PrefFragment2 extends UIFragment {
     }
 
     private void checkOpenWithSpinner() {
-        int modId = R.string.advanced_mode;
-        if (AppState.getInstance().isMusicianMode) {
-            modId = R.string.music_mode;
-        } else if (AppState.getInstance().isAlwaysOpenAsMagazine) {
-            modId = R.string.easy_mode;
+        String modId = AppState.get().nameVerticalMode;
+        if (AppState.get().isMusicianMode) {
+            modId = AppState.get().nameMusicianMode;
+        } else if (AppState.get().isAlwaysOpenAsMagazine) {
+            modId = AppState.get().nameHorizontalMode;
         } else {
-            modId = R.string.advanced_mode;
+            modId = AppState.get().nameVerticalMode;
         }
 
-        selectedOpenMode.setText(TxtUtils.underline(getString(modId)));
+        selectedOpenMode.setText(TxtUtils.underline(modId));
     }
 
     public void onFolderConfigDialog() {
-        AppState.getInstance().searchPaths = AppState.getInstance().searchPaths.replace("//", "/");
+        AppState.get().searchPaths = AppState.get().searchPaths.replace("//", "/");
         PrefDialogs.chooseFolderDialog(getActivity(), new Runnable() {
 
             @Override
             public void run() {
-                AppState.getInstance().searchPaths = AppState.getInstance().searchPaths.replace("//", "/");
-                searchPaths.setText(TxtUtils.underline(AppState.getInstance().searchPaths.replace(",", "<br>")));
+                AppState.get().searchPaths = AppState.get().searchPaths.replace("//", "/");
+                searchPaths.setText(TxtUtils.underline(AppState.get().searchPaths.replace(",", "<br>")));
                 saveChanges();
                 LOG.d("Save Changes", 2);
             }
@@ -1313,15 +1642,22 @@ public class PrefFragment2 extends UIFragment {
     public void onResume() {
         super.onResume();
 
+        BrightnessHelper.updateOverlay(overlay);
+        BrightnessHelper.showBlueLigthDialogAndBrightness(getActivity(), inflate, new Runnable() {
+
+            @Override
+            public void run() {
+                BrightnessHelper.updateOverlay(overlay);
+            }
+        });
+
         rotationText();
 
-        fullScreenText();
-
         ch.setOnCheckedChangeListener(null);
-        ch.setChecked(AppState.getInstance().isReverseKeys);
+        ch.setChecked(AppState.get().isReverseKeys);
         ch.setOnCheckedChangeListener(reverseListener);
 
-        rememberMode.setChecked(AppState.getInstance().isRememberMode);
+        rememberMode.setChecked(AppState.get().isRememberMode);
         checkOpenWithSpinner();
 
         textNigthColor.setTextColor(AppState.get().colorNigthText);
@@ -1330,10 +1666,8 @@ public class PrefFragment2 extends UIFragment {
         textDayColor.setTextColor(AppState.get().colorDayText);
         textDayColor.setBackgroundColor(AppState.get().colorDayBg);
 
-        isRememberDictionary.setChecked(AppState.getInstance().isRememberDictionary);
+        isRememberDictionary.setChecked(AppState.get().isRememberDictionary);
         selectedDictionaly.setText(DialogTranslateFromTo.getSelectedDictionaryUnderline());
-
-        initBrigtness();
 
     }
 
@@ -1341,23 +1675,9 @@ public class PrefFragment2 extends UIFragment {
 
     }
 
-    public void onDefaultBr(final boolean isAuto) {
-        if (isAuto) {
-            final float val = DocumentController.getSystemBrigtness(getActivity());
-            bar.setProgress((int) (val * 100));
-            bar.setOnSeekBarChangeListener(null);
-            bar.setEnabled(false);
-            AppState.getInstance().brightness = -1;
-            DocumentController.applyBrigtness(getActivity());
-        } else {
-            bar.setEnabled(true);
-            bar.setOnSeekBarChangeListener(onSeek);
-        }
-    }
-
     public void initKeys() {
-        nextKeys.setText(String.format("%s: %s", getActivity().getString(R.string.next_keys), AppState.keyToString(AppState.getInstance().nextKeys)));
-        prevKeys.setText(String.format("%s: %s", getActivity().getString(R.string.prev_keys), AppState.keyToString(AppState.getInstance().prevKeys)));
+        nextKeys.setText(String.format("%s: %s", getActivity().getString(R.string.next_keys), AppState.keyToString(AppState.get().nextKeys)));
+        prevKeys.setText(String.format("%s: %s", getActivity().getString(R.string.prev_keys), AppState.keyToString(AppState.get().prevKeys)));
     }
 
     Runnable onCloseDialog = new Runnable() {
@@ -1368,32 +1688,6 @@ public class PrefFragment2 extends UIFragment {
         }
     };
 
-    OnSeekBarChangeListener onSeek = new OnSeekBarChangeListener() {
-
-        @Override
-        public void onStopTrackingTouch(final SeekBar seekBar) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void onStartTrackingTouch(final SeekBar seekBar) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
-            float f = (float) progress / 100;
-            if (f <= 0) {
-                f = 0;
-            }
-            AppState.getInstance().brightness = f;
-            DocumentController.applyBrigtness(getActivity());
-            curBrightness.setText("" + progress);
-
-        }
-    };
     private TextView nextKeys;
     private TextView prevKeys;
     private SeekBar bar;
@@ -1407,6 +1701,10 @@ public class PrefFragment2 extends UIFragment {
     private TextView textDayColor;
     private TextView selectedDictionaly;
 
+    private TextView screenOrientation;
+
+    private View inflate;
+
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -1418,7 +1716,7 @@ public class PrefFragment2 extends UIFragment {
         String string = getResources().getString(R.string.my_email).replace("<u>", "").replace("</u>", "");
         final String aEmailList[] = { string };
         emailIntent.putExtra(android.content.Intent.EXTRA_EMAIL, aEmailList);
-        emailIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, AppsConfig.APP_NAME + " " + Apps.getVersionName(getContext()) + "-" + System.getProperty("os.arch"));
+        emailIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, AppsConfig.TXT_APP_NAME + " " + Apps.getVersionName(getContext()));
         emailIntent.setType("plain/text");
         emailIntent.putExtra(android.content.Intent.EXTRA_TEXT, "Hi Support, ");
 
@@ -1429,12 +1727,25 @@ public class PrefFragment2 extends UIFragment {
         }
     }
 
+    public String getFullDeviceInfo() {
+        return "(" + Build.BRAND + ", " + Build.MODEL + ", " + android.os.Build.VERSION.RELEASE + ", " + Dips.screenWidthDP() + "dp" + ")";
+    }
+
     public void onTheme() {
         getActivity().finish();
         MainTabs2.startActivity(getActivity(), TempHolder.get().currentTab);
     }
 
     public void onScan() {
+        try {
+            final DrawerLayout drawerLayout = (DrawerLayout) getActivity().findViewById(R.id.drawer_layout);
+            if (drawerLayout.isDrawerOpen(Gravity.START)) {
+                drawerLayout.closeDrawer(Gravity.START, !AppState.get().isInkMode);
+            }
+        } catch (Exception e) {
+            LOG.e(e);
+        }
+
         getActivity().startService(new Intent(getActivity(), BooksService.class).setAction(BooksService.ACTION_SEARCH_ALL));
 
         Intent intent = new Intent(UIFragment.INTENT_TINT_CHANGE)//
@@ -1453,52 +1764,41 @@ public class PrefFragment2 extends UIFragment {
     }
 
     public void rotationText() {
-        final int type = AppState.getInstance().orientation;
-        TextView screenType = (TextView) getActivity().findViewById(R.id.screenModeType);
-        if (type == ActivityInfo.SCREEN_ORIENTATION_SENSOR) {
-            screenType.setText(TxtUtils.underline(getString(R.string.automatic)));
-        }
-        if (type == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE) {
-            screenType.setText(TxtUtils.underline(getString(R.string.landscape)));
-        }
-        if (type == ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT) {
-            screenType.setText(TxtUtils.underline(getString(R.string.portrait)));
-        }
+        screenOrientation.setText(DocumentController.getRotationText());
+        TxtUtils.underlineTextView(screenOrientation);
         DocumentController.doRotation(getActivity());
     }
 
     @Override
     public void onActivityCreated(final Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        fullScreenText();
         rotationText();
-        TextView theme = (TextView) getActivity().findViewById(R.id.themeColor);
-        if (AppState.getInstance().isWhiteTheme) {
-            theme.setText(TxtUtils.underline(getString(R.string.light)));
+
+        if (AppState.get().isInkMode) {
+            themeColor.setText(TxtUtils.underline("Ink"));
+        } else if (AppState.get().isWhiteTheme) {
+            themeColor.setText(TxtUtils.underline(getString(R.string.light)));
         } else {
-            theme.setText(TxtUtils.underline(getString(R.string.black)));
+            themeColor.setText(TxtUtils.underline(getString(R.string.black)));
         }
-    }
-
-    public void fullScreenText() {
-        final boolean full = AppState.getInstance().isFullScrean();
-        int textID = full ? R.string.on : R.string.off;
-        ((TextView) getActivity().findViewById(R.id.fullscreenOnOff)).setText(TxtUtils.underline(getString(textID)));
-
-    }
-
-    public SearchFragment getSearchFragmet() {
-        return searchFragmet;
-    }
-
-    public void setSearchFragmet(final SearchFragment searchFragmet) {
-        this.searchFragmet = searchFragmet;
     }
 
     private void saveChanges() {
         if (getActivity() != null) {
             AppState.get().save(getActivity());
         }
+    }
+
+    public String getFontName(float number) {
+        String prefix = getActivity().getString(R.string.normal);
+        float f1 = (number - 1f) * 10;
+        float f2 = (1f - number) * 10 + 0.01f;
+        if (number < 1) {
+            prefix = getActivity().getString(R.string.small) + " (-" + (int) f2 + ")";
+        } else if (number > 1) {
+            prefix = getActivity().getString(R.string.large) + " (+" + (int) f1 + ")";
+        }
+        return prefix;
     }
 
 }

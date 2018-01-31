@@ -8,10 +8,13 @@ import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
+import com.foobnix.pdf.reader.R;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.PorterDuff.Mode;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -23,7 +26,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
-import com.foobnix.pdf.reader.R;
 
 public class TintUtil {
     public static final int RADIUS = Dips.dpToPx(2);
@@ -46,6 +48,7 @@ public class TintUtil {
 
     public static int randomColor(int hash) {
         try {
+            LOG.d("randomColor", hash);
             hash = Math.abs(hash);
             String num = "" + hash;
             float hue = 360f * Float.parseFloat(num.substring(0, 2)) / 100f;
@@ -56,12 +59,12 @@ public class TintUtil {
             return Color.HSVToColor(new float[] { hue, sat, Math.max(Math.min(0.1f, value), 0.5f) });
         } catch (Exception e) {
             LOG.e(e);
-            return tintRandomColor();
+            return Color.HSVToColor(new float[] { new Random().nextInt(360), new Random().nextFloat(), (3f + new Random().nextInt(4)) / 10f });
         }
     }
 
     public static int getStatusBarColor() {
-        return AppState.get().isInvert ? AppState.get().statusBarColorDay : AppState.get().statusBarColorNight;
+        return AppState.get().isDayNotInvert ? AppState.get().statusBarColorDay : AppState.get().statusBarColorNight;
     }
 
     public static int tintRandomColor() {
@@ -152,15 +155,25 @@ public class TintUtil {
         }
     }
 
-    public static ImageView setTintImage(ImageView img) {
+    public static ImageView setTintImageWithAlpha(ImageView img) {
         img.setColorFilter(color, Mode.SRC_ATOP);
         img.setAlpha(230);
         return img;
     }
 
-    public static ImageView setTintImage(ImageView img, int color) {
+    public static ImageView setNoTintImage(ImageView img) {
+        img.setColorFilter(null);
+        return img;
+    }
+
+    public static ImageView setTintImageWithAlpha(ImageView img, int color) {
         img.setColorFilter(color, Mode.SRC_ATOP);
         img.setAlpha(230);
+        return img;
+    }
+
+    public static ImageView setTintImageNoAlpha(ImageView img, int color) {
+        img.setColorFilter(color, Mode.SRC_ATOP);
         return img;
     }
 
@@ -247,16 +260,23 @@ public class TintUtil {
         }
     }
 
+    public static void grayScaleImageView(ImageView v) {
+        ColorMatrix matrix = new ColorMatrix();
+        matrix.setSaturation(0); // 0 means grayscale
+        ColorMatrixColorFilter cf = new ColorMatrixColorFilter(matrix);
+        v.setColorFilter(cf);
+    }
+
     public static int starColorEmpty = Color.parseColor("#eeFFFFFF");
     public static int starColorFull = Color.parseColor("#eeFFFF00");
 
     public static void drawStar(final ImageView imageView, boolean isStar) {
         if (isStar) {
             imageView.setImageResource(R.drawable.star_1);
-            TintUtil.setTintImage(imageView, TintUtil.color);
+            TintUtil.setTintImageWithAlpha(imageView, TintUtil.color);
         } else {
             imageView.setImageResource(R.drawable.star_2);
-            TintUtil.setTintImage(imageView, TintUtil.color);
+            TintUtil.setTintImageWithAlpha(imageView, TintUtil.color);
         }
     }
 

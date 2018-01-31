@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.ebookdroid.core.codec.OutlineLink;
 import org.xmlpull.v1.XmlPullParser;
 
 import com.BaseExtractor;
@@ -28,7 +29,9 @@ import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.hypen.HypenUtils;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.model.BookCSS;
+import com.foobnix.pdf.info.model.OutlineLinkWrapper;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.sys.TempHolder;
 
 import android.util.Base64;
 
@@ -165,9 +168,11 @@ public class Fb2Extractor extends BaseExtractor {
     @Override
     public EbookMeta getBookMetaInformation(String inputFile) {
         try {
-            if (inputFile.contains(ExtUtils.REFLOW_FB2)) {
-                return new EbookMeta(new File(inputFile).getName().replace(ExtUtils.REFLOW_FB2, ""), "Lirbi Reflow", "Lirbi Reflow", "Lirbi Reflow");
-            }
+            // if (inputFile.contains(ExtUtils.REFLOW_FB2)) {
+            // return new EbookMeta(new
+            // File(inputFile).getName().replace(ExtUtils.REFLOW_FB2, ""), "Text Reflow",
+            // "", "");
+            // }
 
             XmlPullParser xpp = XmlParser.buildPullParser();
             xpp.setInput(new FileInputStream(inputFile), findHeaderEncoding(inputFile));
@@ -176,11 +181,10 @@ public class Fb2Extractor extends BaseExtractor {
 
             String firstName = null;
             String lastName = null;
-            String sequence = "";
             String genre = "";
-            String number = "";
+            String sequence = "";
             String lang = "";
-
+            String number = "";
             boolean titleInfo = false;
 
             int eventType = xpp.getEventType();
@@ -206,8 +210,8 @@ public class Fb2Extractor extends BaseExtractor {
                         } else if (xpp.getName().equals("sequence")) {
                             sequence = xpp.getAttributeValue(null, "name");
                             String current = xpp.getAttributeValue(null, "number");
-                            if (current != null && !("0".equals(current) || "00".equals(current))) {
-                                number = number + "," + current;
+                            if (TxtUtils.isNotEmpty(current) && !("0".equals(current) || "00".equals(current))) {
+                                number = current;
                             }
                         }
                     }
@@ -234,12 +238,12 @@ public class Fb2Extractor extends BaseExtractor {
             }
 
             if (TxtUtils.isNotEmpty(number)) {
-                String index = number.replaceAll("^,", "");
                 EbookMeta ebookMeta = new EbookMeta(bookTitle, firstName + " " + lastName, sequence, genre);
                 try {
                     ebookMeta.setLang(lang);
-                    ebookMeta.setsIndex(Integer.parseInt(index));
+                    ebookMeta.setsIndex(Integer.parseInt(number));
                 } catch (Exception e) {
+                    LOG.e(e);
                 }
                 return ebookMeta;
             } else {
@@ -269,6 +273,9 @@ public class Fb2Extractor extends BaseExtractor {
             String key = "";
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (TempHolder.get().loadingCancelled) {
+                    break;
+                }
                 if (eventType == XmlPullParser.START_TAG) {
                     if (xpp.getName().equals("a")) {
                         String type = xpp.getAttributeValue(null, "type");
@@ -373,6 +380,39 @@ public class Fb2Extractor extends BaseExtractor {
         return false;
     }
 
+    public static boolean convertFolderToEpub(File inputFolder, File outputFile, String author, String title, List<OutlineLink> outline) {
+
+        try {
+            ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(outputFile));
+            zos.setLevel(0);
+
+            writeToZip(zos, "mimetype", "application/epub+zip");
+            writeToZip(zos, "META-INF/container.xml", container_xml);
+
+            String meta = content_opf.replace("fb2.fb2", "temp" + ExtUtils.REFLOW_HTML);
+            meta = meta.replace("%title%", title);
+            meta = meta.replace("%creator%", author);
+
+            writeToZip(zos, "OEBPS/content.opf", meta);
+            if (TxtUtils.isListNotEmpty(outline)) {
+                writeToZip(zos, "OEBPS/fb2.ncx", genetateNCXbyOutline(outline));
+            }
+
+            for (File file : inputFolder.listFiles()) {
+                writeToZip(zos, "OEBPS/" + file.getName(), new FileInputStream(file));
+            }
+
+            LOG.d("Fb2Context convert true");
+            zos.close();
+            return true;
+        } catch (Exception e) {
+            LOG.d("Fb2Context convert false error");
+            LOG.e(e);
+        }
+        LOG.d("Fb2Context convert false");
+        return false;
+    }
+
     public ByteArrayOutputStream generateFb2File(String fb2, String encoding, boolean fixXML) throws Exception {
         BufferedReader input = new BufferedReader(new InputStreamReader(new FileInputStream(fb2), encoding));
 
@@ -393,12 +433,21 @@ public class Fb2Extractor extends BaseExtractor {
         long init = System.currentTimeMillis();
 
         while ((line = input.readLine()) != null) {
+            if (TempHolder.get().loadingCancelled) {
+                break;
+            }
 
             if (!isEncoding && line.contains("windows-1251")) {
                 line = line.replace("windows-1251", "utf-8");
                 isEncoding = true;
             } else if (!isEncoding && line.contains("Windows-1251")) {
                 line = line.replace("Windows-1251", "utf-8");
+                isEncoding = true;
+            } else if (!isEncoding && line.contains("windows-1252")) {
+                line = line.replace("windows-1252", "utf-8");
+                isEncoding = true;
+            } else if (!isEncoding && line.contains("Windows-1252")) {
+                line = line.replace("Windows-1252", "utf-8");
                 isEncoding = true;
             }
 
@@ -418,41 +467,33 @@ public class Fb2Extractor extends BaseExtractor {
                 if (BookCSS.get().isAutoHypens && line.contains("<title")) {
                     titleBegin = true;
                 }
+
                 if (line.contains("</title>")) {
                     titleBegin = false;
                     count++;
                     line = line.replace("</title>", "<a id=\"" + count + "\"></a></title>");
                 }
-                if (BookCSS.get().isAutoHypens && line.contains("<subtitle>")) {
-                    titleBegin = true;
-                }
-                if (line.contains("</subtitle>")) {
-                    titleBegin = false;
-                    count++;
-                    line = line.replace("</subtitle>", "<a id=\"" + count + "\"></a></subtitle>");
-                }
-                if (line.contains("</body>")) {
-                    count++;
-                    line = line.replace("</body>", "<a id=\"" + count + "\"></a></body>");
+
+                if (!isFindBodyEnd && line.contains("</body>")) {
+                    isFindBodyEnd = true;
+                    // count++;
+                    // line = line.replace("</body>", "<a id=\"" + count + "\"></a></body>");
                 }
 
-                if ((AppState.get().isDouble || !titleBegin) && BookCSS.get().isAutoHypens) {
-                    if (!isFindBodyEnd && line.contains("</body>")) {
-                        isFindBodyEnd = true;
-                    }
-                    if (!isFindBodyEnd) {
-                        if (line.contains("&")) {
-                            line = line.replace("&nbsp;", " ");
-                        }
+                if (!isFindBodyEnd) {
+                    if ((AppState.get().isDouble || !titleBegin) && BookCSS.get().isAutoHypens) {
+                        // if (line.contains("&")) {
+                        // line = line.replace("&nbsp;", " ");
+                        // }
                         // line = HypenUtils.applyHypnes(line);
                         line = HypenUtils.applyHypnesOld(line);
                     }
                 }
-
                 writer.println(line);
             }
 
         }
+
         long delta = System.currentTimeMillis() - init;
         LOG.d("generateFb2File", delta / 1000.0);
         input.close();
@@ -471,6 +512,9 @@ public class Fb2Extractor extends BaseExtractor {
         HypenUtils.applyLanguage(BookCSS.get().hypenLang);
 
         while ((line = input.readLine()) != null) {
+            if (TempHolder.get().loadingCancelled) {
+                break;
+            }
             if (!line.endsWith(" ")) {
                 line = line + " ";
             }
@@ -484,9 +528,6 @@ public class Fb2Extractor extends BaseExtractor {
                     line = "</" + subLine[i];
                 }
 
-                if (line.contains("&")) {
-                    line = line.replace("&nbsp;", " ");
-                }
                 line = HypenUtils.applyHypnes(line);
                 writer.print(line);
             }
@@ -495,10 +536,24 @@ public class Fb2Extractor extends BaseExtractor {
         return out;
     }
 
-    public String genetateNCX(List<String> titles) {
+    public static String genetateNCX(List<String> titles) {
         StringBuilder navs = new StringBuilder();
         for (int i = 0; i < titles.size(); i++) {
             navs.append(createNavPoint(i + 1, titles.get(i)));
+        }
+        return NCX.replace("%nav%", navs.toString());
+    }
+
+    public static String genetateNCXbyOutline(List<OutlineLink> titles) {
+        StringBuilder navs = new StringBuilder();
+        for (int i = 0; i < titles.size(); i++) {
+            OutlineLink link = titles.get(i);
+            String titleTxt = link.getTitle();
+            if (TxtUtils.isNotEmpty(titleTxt)) {
+                String createNavPoint = createNavPoint(OutlineLinkWrapper.getPageNumber(link.getLink()), link.getLevel() + DIVIDER + titleTxt);
+                createNavPoint = createNavPoint.replace("fb2.fb2", "temp-reflow.html");
+                navs.append(createNavPoint);
+            }
         }
         return NCX.replace("%nav%", navs.toString());
     }
@@ -514,40 +569,35 @@ public class Fb2Extractor extends BaseExtractor {
         List<String> titles = new ArrayList<String>();
 
         int section = 0;
-        boolean isFirstEndBody = false;
         int dividerSection = -1;
         String dividerLine = null;
         while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (TempHolder.get().loadingCancelled) {
+                break;
+            }
             if (eventType == XmlPullParser.START_TAG) {
-                if (xpp.getName().equals("section") || xpp.getName().equals("subtitle")) {
+                if (xpp.getName().equals("section")) {
                     section++;
                 }
-                if (xpp.getName().equals("title") || xpp.getName().equals("subtitle")) {
+                if (xpp.getName().equals("title")) {
                     isTitle = true;
                 }
 
             } else if (eventType == XmlPullParser.END_TAG) {
-                if (xpp.getName().equals("title") || xpp.getName().equals("subtitle")) {
+                if (xpp.getName().equals("title")) {
                     isTitle = false;
-                    if (isFirstEndBody) {
-                        titles.add(section + DIVIDER + title + FOOTER_AFTRER_BOODY);
-                    } else {
-                        titles.add(section + DIVIDER + title);
-                    }
+                    title = "[" + xpp.getName() + "]" + title;
+                    titles.add(section + DIVIDER + title);
                     title = "";
                     if (section == dividerSection) {
                         titles.remove(dividerLine);
                     }
                 }
-                if (xpp.getName().equals("section") || xpp.getName().equals("subtitle")) {
+                if (xpp.getName().equals("section")) {
                     section--;
                 }
-                if (!isFirstEndBody && xpp.getName().equals("body")) {
-                    isFirstEndBody = true;
-                    section++;
-                    dividerSection = section;
-                    dividerLine = section + DIVIDER + FOOTER_NOTES_SIGN;
-                    titles.add(dividerLine);
+                if (xpp.getName().equals("body")) {
+                    break;
                 }
 
             } else if (eventType == XmlPullParser.TEXT) {
@@ -575,6 +625,8 @@ public class Fb2Extractor extends BaseExtractor {
             encodingCheck.read(header);
             if (new String(header).toLowerCase(Locale.US).contains("windows-1251")) {
                 encoding = "cp1251";
+            } else if (new String(header).toLowerCase(Locale.US).contains("windows-1252")) {
+                encoding = "cp1252";
             }
             encodingCheck.close();
             return encoding;
@@ -593,7 +645,8 @@ public class Fb2Extractor extends BaseExtractor {
     public static String content_opf = "<?xml version=\"1.0\"?>\n" + //
             "<package version=\"2.0\" unique-identifier=\"uid\" xmlns=\"http://www.idpf.org/2007/opf\">\n" + //
             " <metadata xmlns:opf=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n" + //
-            "  <dc:title>title</dc:title>\n" + //
+            "  <dc:title>%title%</dc:title>\n" + //
+            "  <dc:creator>%creator%</dc:creator>\n" + //
             "<meta name=\"cover\" content=\"cover.jpg\" />\n" + //
             " </metadata>\n" + //
             "\n" + "<manifest>\n" + //
@@ -620,7 +673,7 @@ public class Fb2Extractor extends BaseExtractor {
             " </navMap>\n" + //
             "</ncx>";//
 
-    public String createNavPoint(int id, String text) {
+    public static String createNavPoint(int id, String text) {
         return "<navPoint id=\"toc-" + id + "\" playOrder=\"" + id + "\">\n" + //
                 "<navLabel>\n" + //
                 "<text>" + text + "</text>\n" + //
@@ -639,7 +692,7 @@ public class Fb2Extractor extends BaseExtractor {
         zipCopyNoClose(stream, zos);
     }
 
-    public void writeToZip(ZipOutputStream zos, String name, String content) throws IOException {
+    public static void writeToZip(ZipOutputStream zos, String name, String content) throws IOException {
         writeToZip(zos, name, new ByteArrayInputStream(content.getBytes()));
     }
 

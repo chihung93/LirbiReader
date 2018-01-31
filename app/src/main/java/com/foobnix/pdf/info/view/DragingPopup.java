@@ -20,12 +20,14 @@ import android.content.SharedPreferences.Editor;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 public abstract class DragingPopup {
+    protected static final String PREF = "PREF";
     private static final String DRAGGING_POPUPS = "DraggingPopups";
     private static int MIN_WH = Dips.dpToPx(50);
     private FrameLayout anchor;
@@ -36,6 +38,16 @@ public abstract class DragingPopup {
     private int width;
     private int heigth;
     private Runnable onCloseListener;
+
+    protected String titleAction;
+    protected Runnable titleRunnable;
+
+    protected int titlePopupIcon;
+    protected MyPopupMenu titlePopupMenu;
+
+    public void beforeCreate() {
+
+    }
 
     static class Place {
         public int x, y, width, height;
@@ -100,6 +112,10 @@ public abstract class DragingPopup {
 
     public DragingPopup(String title, final FrameLayout anchor, int width, int heigth) {
         this.anchor = anchor;
+        if (Dips.isXLargeScreen()) {
+            width = (int) (width * 1.5);
+            heigth = (int) (heigth * 1.5);
+        }
         if (Dips.screenWidth() > Dips.screenHeight()) {
             width = (int) (width * 1.25);
         }
@@ -111,14 +127,6 @@ public abstract class DragingPopup {
         popupView = inflater.inflate(R.layout.drag_popup, null, false);
         ImageView appLogo = (ImageView) popupView.findViewById(R.id.droid);
         appLogo.setVisibility(View.GONE);
-
-        if (false) {
-            try {
-                appLogo.setImageDrawable(anchor.getContext().getPackageManager().getApplicationIcon(anchor.getContext().getApplicationInfo()));
-            } catch (Exception e) {
-                LOG.e(e);
-            }
-        }
 
         View findViewById = popupView.findViewById(R.id.topLayout);
         TintUtil.setTintBgSimple(findViewById, 230);
@@ -142,7 +150,7 @@ public abstract class DragingPopup {
     }
 
     public void initState() {
-        String tag = anchor.getTag().toString() + Dips.screenWidth();
+        String tag = getTAG() + Dips.screenWidth();
         if (cache.containsKey(tag)) {
             Place place = cache.get(tag);
             AnchorHelper.setXY(anchor, place.x, place.y);
@@ -176,6 +184,16 @@ public abstract class DragingPopup {
         return this;
     }
 
+    public void realod() {
+        popupContent.removeAllViews();
+        popupContent.addView(getContentView(inflater));
+    }
+
+    public void setTitlePopupIcon(int icon) {
+        ImageView onIconAction = (ImageView) popupView.findViewById(R.id.onIconAction);
+        onIconAction.setImageResource(icon);
+    }
+
     public DragingPopup show(String tag, boolean always, boolean update) {
         if (tag != null) {
             if (!always) {
@@ -196,7 +214,44 @@ public abstract class DragingPopup {
         }
 
         popupContent.removeAllViews();
+        beforeCreate();
+
+        if (titleAction != null) {
+            popupView.findViewById(R.id.onTitleAction).setVisibility(View.VISIBLE);
+            popupView.findViewById(R.id.onTitleAction1).setVisibility(View.VISIBLE);
+            popupView.findViewById(R.id.onTitleAction).setOnClickListener(new OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    if (titleRunnable != null) {
+                        titleRunnable.run();
+                    }
+
+                }
+            });
+        } else {
+            popupView.findViewById(R.id.onTitleAction).setVisibility(View.GONE);
+            popupView.findViewById(R.id.onTitleAction1).setVisibility(View.GONE);
+        }
+
         popupContent.addView(getContentView(inflater));
+
+        ImageView onIconAction = (ImageView) popupView.findViewById(R.id.onIconAction);
+        if (titlePopupMenu == null) {
+            onIconAction.setVisibility(View.GONE);
+            onIconAction.setImageResource(titlePopupIcon);
+        } else {
+            onIconAction.setVisibility(View.VISIBLE);
+            onIconAction.setOnClickListener(new OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    titlePopupMenu.setAnchor(v);
+                    titlePopupMenu.show();
+
+                }
+            });
+        }
 
         anchor.setVisibility(View.VISIBLE);
         anchor.removeAllViews();
@@ -304,8 +359,10 @@ public abstract class DragingPopup {
         if (onCloseListener != null) {
             onCloseListener.run();
         }
+        Keyboards.close(anchor);
         Keyboards.hideNavigation((Activity) anchor.getContext());
     }
+
 
     private void saveLayout() {
         try {
@@ -315,12 +372,21 @@ public abstract class DragingPopup {
             place.width = popupView.getLayoutParams().width;
             place.height = popupView.getLayoutParams().height;
 
-            String tag = anchor.getTag().toString() + Dips.screenWidth();
+            String tag = getTAG() + Dips.screenWidth();
             cache.put(tag, place);
             LOG.d("Anchor Save", tag, place.x, place.y, place.width, place.height);
         } catch (Exception e) {
             LOG.e(e);
         }
+    }
+
+    public String getTAG() {
+        String tag = anchor.getTag().toString();
+        if (tag.contains(PREF)) {
+            tag = PREF;
+        }
+        return tag;
+
     }
 
     public DragingPopup setOnCloseListener(Runnable onCloseListener) {

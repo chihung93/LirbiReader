@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.ebookdroid.LirbiApp;
+import org.ebookdroid.LibreraApp;
 
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
@@ -30,7 +30,8 @@ import android.widget.TextView;
 
 public class MagicHelper {
 
-    public static boolean isNeedMagic = true;
+    public static volatile boolean isNeedMagic = true;
+    public static volatile boolean isNeedBC = true;
 
     public static int hash() {
         StringBuilder builder = new StringBuilder();
@@ -131,7 +132,7 @@ public class MagicHelper {
     }
 
     public static void applyBookEffect(Bitmap dest) {
-        if (AppState.getInstance().isBookCoverEffect) {
+        if (AppState.get().isBookCoverEffect) {
             Canvas canvas = new Canvas(dest);
             IMG.bookBGNoMark.setBounds(0, 0, dest.getWidth(), dest.getHeight());
             IMG.bookBGNoMark.draw(canvas);
@@ -149,11 +150,11 @@ public class MagicHelper {
             return false;
         }
 
-        boolean isDay = AppState.get().isInvert && //
+        boolean isDay = AppState.get().isDayNotInvert && //
                 (AppState.get().colorDayBg != AppState.COLOR_WHITE || //
                         AppState.get().colorDayText != AppState.COLOR_BLACK); //
 
-        boolean isNigth = !AppState.get().isInvert && //
+        boolean isNigth = !AppState.get().isDayNotInvert && //
                 (AppState.get().colorNigthBg != AppState.COLOR_BLACK || //
                         AppState.get().colorNigthText != AppState.COLOR_WHITE); //
 
@@ -161,11 +162,11 @@ public class MagicHelper {
     }
 
     public static boolean isNeedBookBackgroundImage() {
-        return (!AppState.get().isInvert && AppState.get().isUseBGImageNight) || (AppState.get().isInvert && AppState.get().isUseBGImageDay);
+        return (!AppState.get().isDayNotInvert && AppState.get().isUseBGImageNight) || (AppState.get().isDayNotInvert && AppState.get().isUseBGImageDay);
     }
 
     public static String getImagePath() {
-        return !AppState.get().isInvert ? AppState.get().bgImageNightPath : AppState.get().bgImageDayPath;
+        return !AppState.get().isDayNotInvert ? AppState.get().bgImageNightPath : AppState.get().bgImageDayPath;
     }
 
     public static String getImagePath(boolean isDay) {
@@ -173,7 +174,7 @@ public class MagicHelper {
     }
 
     public static int getTransparencyInt() {
-        return AppState.get().isInvert ? AppState.get().bgImageDayTransparency : AppState.get().bgImageNightTransparency;
+        return AppState.get().isDayNotInvert ? AppState.get().bgImageDayTransparency : AppState.get().bgImageNightTransparency;
     }
 
     public static final String IMAGE_BG_1 = "bg/bg1.jpg";
@@ -253,7 +254,7 @@ public class MagicHelper {
             return BitmapFactory.decodeFile(name, opt);
         }
         try {
-            InputStream oldBook = LirbiApp.context.getAssets().open(name);
+            InputStream oldBook = LibreraApp.context.getAssets().open(name);
             Bitmap decodeStream = BitmapFactory.decodeStream(oldBook);
             Bitmap res = decodeStream.copy(Config.RGB_565, false);
             decodeStream.recycle();
@@ -336,18 +337,18 @@ public class MagicHelper {
     }
 
     public static int getTextColor() {
-        return AppState.get().isInvert ? AppState.get().colorDayText : AppState.get().colorNigthText;
+        return AppState.get().isDayNotInvert ? AppState.get().colorDayText : AppState.get().colorNigthText;
     }
 
     public static int getBgColor() {
-        if (AppState.get().isInvert && AppState.get().isUseBGImageDay) {
+        if (AppState.get().isDayNotInvert && AppState.get().isUseBGImageDay) {
             // return Color.parseColor("#EFEBDE");
         }
-        if (!AppState.get().isInvert && AppState.get().isUseBGImageNight) {
+        if (!AppState.get().isDayNotInvert && AppState.get().isUseBGImageNight) {
             // return Color.parseColor("#52493A");
         }
 
-        return AppState.get().isInvert ? AppState.get().colorDayBg : AppState.get().colorNigthBg;
+        return AppState.get().isDayNotInvert ? AppState.get().colorDayBg : AppState.get().colorNigthBg;
     }
 
     public static float[] getHSV(int color) {
@@ -471,6 +472,7 @@ public class MagicHelper {
 
         int textColor = MagicHelper.getTextColor();
         int bgColor = MagicHelper.getBgColor();
+        int first = allpixels[0];
 
         for (int i = 0; i < allpixels.length; i++) {
             int color = allpixels[i];
@@ -480,7 +482,7 @@ public class MagicHelper {
                 continue;
             }
             //
-            if (allpixels[i] == Color.WHITE) {
+            if (color == Color.WHITE || color == first) {
                 allpixels[i] = bgColor;
                 continue;
             }
@@ -663,7 +665,7 @@ public class MagicHelper {
 
     public static boolean isColorDarkSimple(int color) {
         int k = Color.red(color) + Color.green(color) + Color.blue(color);
-        if (k > 550) {// 350
+        if (k > 550) {// 550
             return false;
         } else {
             return true;
@@ -683,23 +685,109 @@ public class MagicHelper {
         int[] arr = new int[src.getWidth() * src.getHeight()];
         src.getPixels(arr, 0, src.getWidth(), 0, 0, src.getWidth(), src.getHeight());
         quickContrast3(arr, contrast, brigtness);
-        Bitmap bmOut = Bitmap.createBitmap(src.getWidth(), src.getHeight(), src.getConfig());
+        Bitmap bmOut = Bitmap.createBitmap(src.getWidth(), src.getHeight(), Config.RGB_565);
+        LOG.d("Bitmap config", "RGB_565", src.getConfig() == Config.RGB_565, "ARGB_8888", src.getConfig() == Config.ARGB_8888);
         bmOut.setPixels(arr, 0, src.getWidth(), 0, 0, src.getWidth(), src.getHeight());
         return bmOut;
 
     }
 
-    public static void applyQuickContrastAndBrightness(int[] arr) {
-        if (AppState.get().contrastImage == 0 && AppState.get().brigtnessImage == 0) {
-            return;
+    public static void applyQuickContrastAndBrightness(int[] arr, int w, int h) {
+        if (AppState.get().isEnableBC) {
+            if (AppState.get().contrastImage != 0 || AppState.get().brigtnessImage != 0) {
+                quickContrast3(arr, AppState.get().contrastImage, AppState.get().brigtnessImage * -1);
+            }
+            if (AppState.get().bolderTextOnImage) {
+                ivanEbolden(arr);
+            }
         }
-        quickContrast3(arr, AppState.get().contrastImage, AppState.get().brigtnessImage * -1);
+
+    }
+
+    public static void ivanEbolden(int[] arr) {
+        int prevSum = 0;
+        for (int i = 0; i < arr.length; i++) {
+            int color = arr[i];
+            if (color == Color.BLACK) {
+                prevSum = 0;
+                continue;
+            }
+            if (color == Color.WHITE) {
+                arr[i] = Color.rgb(prevSum, prevSum, prevSum);
+                prevSum = 255;
+                continue;
+            }
+
+            int r = Color.red(color);
+            int g = Color.green(color);
+            int b = Color.blue(color);
+
+            int sum = (r + g + b) / 3;
+
+            int nexSum = sum;
+            if (i > 1) {
+                nexSum = Math.min(prevSum, sum);
+            }
+            prevSum = sum;
+            arr[i] = Color.rgb(nexSum, nexSum, nexSum);
+        }
+
+    }
+
+    public static void ivanContrast(int[] arr, int extra_contrast, int delta_brightness) {
+        int prevSum = 0;
+        for (int i = 0; i < arr.length; i++) {
+            int color = arr[i];
+            if (color == Color.BLACK) {
+                prevSum = 0;
+                continue;
+            }
+            if (color == Color.WHITE) {
+                arr[i] = Color.rgb(prevSum, prevSum, prevSum);
+                prevSum = 255;
+                continue;
+            }
+
+            int r = Color.red(color);
+            int g = Color.green(color);
+            int b = Color.blue(color);
+
+            int sum = (r + g + b) / 3;
+
+            sum = sum + delta_brightness; // make darker
+
+            if (sum > 128) {
+                sum = sum + extra_contrast;
+            } else {
+                sum = sum - extra_contrast;
+            }
+
+            if (sum > 255) {
+                sum = 255;
+            } else if (sum < 0) {
+                sum = 0;
+            }
+
+            int nexSum = sum;
+            if (AppState.get().bolderTextOnImage) {
+                if (i > 1) {
+                    nexSum = Math.min(prevSum, sum);
+                }
+            }
+
+            prevSum = sum;
+
+            arr[i] = Color.rgb(nexSum, nexSum, nexSum);
+
+        }
+
     }
 
     static int[] brightnessContrastMap = new int[256];
     static int simpleHash = 0;
 
     public static void quickContrast3(int[] arr, int extra_contrast, int delta_brightness) {
+
         int lum;
 
         // Use linear contrast variation; extra_contrast=0 = no change,
@@ -730,9 +818,227 @@ public class MagicHelper {
         for (int i = 0; i < arr.length; i++) {
             // Get luminosity. Also use G and B, with 2x R
             int temp = arr[i];
+            if (temp == Color.WHITE || temp == Color.BLACK) {
+                continue;
+            }
             lum = ((temp & 0x00FF0000) >> 17) + ((temp & 0x0000FF00) >> 10) + ((temp & 0x000000FF) >> 2);
             // retrieve output from map
             arr[i] = brightnessContrastMap[lum];
+        }
+
+    }
+
+    static int[] sharpenMap = null;
+
+    public static void embolden(int[] arr) {
+
+        int lum;
+
+        if (sharpenMap == null) {
+            sharpenMap = new int[256];
+            for (int i = 0; i <= 255; i++) {
+                lum = 255 - ((255 - i) * (255 - i) / 255); // inv-mult map (to a
+                sharpenMap[i] = (lum << 16) + (lum << 8) + lum;
+            }
+        }
+
+        int lum_this = arr[0] & 0x000000FF; // lazy read for the first pixel
+        for (int i = 0; i < arr.length - 1; i++) {
+            int temp = arr[i + 1];
+            int lum_next = ((temp & 0x00FF0000) >> 17) + ((temp & 0x0000FF00) >> 10) + ((temp & 0x000000FF) >> 2);
+
+            lum = (lum_this * lum_next) >> 8; // multiply with offset
+
+            arr[i] = sharpenMap[lum];
+
+            lum_this = lum_next;
+
+        }
+
+    }
+
+    public static void fastblur(int[] pix, int w, int h, int radius) {
+        int wm = w - 1;
+        int hm = h - 1;
+        int wh = w * h;
+        int div = radius + radius + 1;
+
+        int r[] = new int[wh];
+        int g[] = new int[wh];
+        int b[] = new int[wh];
+        int rsum, gsum, bsum, x, y, i, p, yp, yi, yw;
+        int vmin[] = new int[Math.max(w, h)];
+
+        int divsum = (div + 1) >> 1;
+        divsum *= divsum;
+        int dv[] = new int[256 * divsum];
+        for (i = 0; i < 256 * divsum; i++) {
+            dv[i] = (i / divsum);
+        }
+
+        yw = yi = 0;
+
+        int[][] stack = new int[div][3];
+        int stackpointer;
+        int stackstart;
+        int[] sir;
+        int rbs;
+        int r1 = radius + 1;
+        int routsum, goutsum, boutsum;
+        int rinsum, ginsum, binsum;
+
+        for (y = 0; y < h; y++) {
+            rinsum = ginsum = binsum = routsum = goutsum = boutsum = rsum = gsum = bsum = 0;
+            for (i = -radius; i <= radius; i++) {
+                p = pix[yi + Math.min(wm, Math.max(i, 0))];
+                sir = stack[i + radius];
+                sir[0] = (p & 0xff0000) >> 16;
+                sir[1] = (p & 0x00ff00) >> 8;
+                sir[2] = (p & 0x0000ff);
+                rbs = r1 - Math.abs(i);
+                rsum += sir[0] * rbs;
+                gsum += sir[1] * rbs;
+                bsum += sir[2] * rbs;
+                if (i > 0) {
+                    rinsum += sir[0];
+                    ginsum += sir[1];
+                    binsum += sir[2];
+                } else {
+                    routsum += sir[0];
+                    goutsum += sir[1];
+                    boutsum += sir[2];
+                }
+            }
+            stackpointer = radius;
+
+            for (x = 0; x < w; x++) {
+
+                r[yi] = dv[rsum];
+                g[yi] = dv[gsum];
+                b[yi] = dv[bsum];
+
+                rsum -= routsum;
+                gsum -= goutsum;
+                bsum -= boutsum;
+
+                stackstart = stackpointer - radius + div;
+                sir = stack[stackstart % div];
+
+                routsum -= sir[0];
+                goutsum -= sir[1];
+                boutsum -= sir[2];
+
+                if (y == 0) {
+                    vmin[x] = Math.min(x + radius + 1, wm);
+                }
+                p = pix[yw + vmin[x]];
+
+                sir[0] = (p & 0xff0000) >> 16;
+                sir[1] = (p & 0x00ff00) >> 8;
+                sir[2] = (p & 0x0000ff);
+
+                rinsum += sir[0];
+                ginsum += sir[1];
+                binsum += sir[2];
+
+                rsum += rinsum;
+                gsum += ginsum;
+                bsum += binsum;
+
+                stackpointer = (stackpointer + 1) % div;
+                sir = stack[(stackpointer) % div];
+
+                routsum += sir[0];
+                goutsum += sir[1];
+                boutsum += sir[2];
+
+                rinsum -= sir[0];
+                ginsum -= sir[1];
+                binsum -= sir[2];
+
+                yi++;
+            }
+            yw += w;
+        }
+        for (x = 0; x < w; x++) {
+            rinsum = ginsum = binsum = routsum = goutsum = boutsum = rsum = gsum = bsum = 0;
+            yp = -radius * w;
+            for (i = -radius; i <= radius; i++) {
+                yi = Math.max(0, yp) + x;
+
+                sir = stack[i + radius];
+
+                sir[0] = r[yi];
+                sir[1] = g[yi];
+                sir[2] = b[yi];
+
+                rbs = r1 - Math.abs(i);
+
+                rsum += r[yi] * rbs;
+                gsum += g[yi] * rbs;
+                bsum += b[yi] * rbs;
+
+                if (i > 0) {
+                    rinsum += sir[0];
+                    ginsum += sir[1];
+                    binsum += sir[2];
+                } else {
+                    routsum += sir[0];
+                    goutsum += sir[1];
+                    boutsum += sir[2];
+                }
+
+                if (i < hm) {
+                    yp += w;
+                }
+            }
+            yi = x;
+            stackpointer = radius;
+            for (y = 0; y < h; y++) {
+                // Preserve alpha channel: ( 0xff000000 & pix[yi] )
+                pix[yi] = (0xff000000 & pix[yi]) | (dv[rsum] << 16) | (dv[gsum] << 8) | dv[bsum];
+
+                rsum -= routsum;
+                gsum -= goutsum;
+                bsum -= boutsum;
+
+                stackstart = stackpointer - radius + div;
+                sir = stack[stackstart % div];
+
+                routsum -= sir[0];
+                goutsum -= sir[1];
+                boutsum -= sir[2];
+
+                if (x == 0) {
+                    vmin[y] = Math.min(y + r1, hm) * w;
+                }
+                p = x + vmin[y];
+
+                sir[0] = r[p];
+                sir[1] = g[p];
+                sir[2] = b[p];
+
+                rinsum += sir[0];
+                ginsum += sir[1];
+                binsum += sir[2];
+
+                rsum += rinsum;
+                gsum += ginsum;
+                bsum += binsum;
+
+                stackpointer = (stackpointer + 1) % div;
+                sir = stack[stackpointer];
+
+                routsum += sir[0];
+                goutsum += sir[1];
+                boutsum += sir[2];
+
+                rinsum -= sir[0];
+                ginsum -= sir[1];
+                binsum -= sir[2];
+
+                yi += w;
+            }
         }
 
     }

@@ -2,20 +2,26 @@ package com.foobnix.pdf.search.activity;
 
 import java.util.List;
 
+import org.ebookdroid.LibreraApp;
 import org.ebookdroid.core.codec.PageLink;
 import org.ebookdroid.droids.mupdf.codec.TextWord;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+import com.foobnix.android.utils.Apps;
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
+import com.foobnix.android.utils.Vibro;
+import com.foobnix.pdf.reader.R;
+import com.foobnix.pdf.info.view.BrightnessHelper;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
 import com.foobnix.pdf.search.activity.msg.InvalidateMessage;
 import com.foobnix.pdf.search.activity.msg.MessageAutoFit;
 import com.foobnix.pdf.search.activity.msg.MessageCenterHorizontally;
 import com.foobnix.pdf.search.activity.msg.MessageEvent;
+import com.foobnix.pdf.search.activity.msg.MovePageAction;
 import com.foobnix.pdf.search.activity.msg.TextWordsMessage;
 import com.foobnix.sys.ClickUtils;
 import com.foobnix.sys.TempHolder;
@@ -32,13 +38,13 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.Scroller;
+import android.widget.Toast;
 
 public class PageImaveView extends View {
 
@@ -60,6 +66,8 @@ public class PageImaveView extends View {
     private int pageNumber;
     ClickUtils clickUtils;
 
+    BrightnessHelper brightnessHelper;
+
     public PageImaveView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
 
@@ -68,12 +76,13 @@ public class PageImaveView extends View {
         imageGestureListener = new ImageSimpleGestureListener();
         gestureDetector = new GestureDetector(context, imageGestureListener);
 
-        paintWrods.setColor(AppState.get().isInvert ? Color.BLUE : Color.YELLOW);
+        paintWrods.setColor(AppState.get().isDayNotInvert ? Color.BLUE : Color.YELLOW);
         paintWrods.setAlpha(60);
         paintWrods.setStrokeWidth(Dips.dpToPx(2));
 
         EventBus.getDefault().register(this);
         clickUtils = new ClickUtils();
+        brightnessHelper = new BrightnessHelper();
     }
 
     public RectF transform(RectF origin, int number) {
@@ -158,6 +167,48 @@ public class PageImaveView extends View {
     }
 
     @Subscribe
+    public void onMovePage(MovePageAction event) {
+        if (pageNumber != event.getPage()) {
+            return;
+        }
+        int k = Dips.dpToPx(3);
+        float scale = 0.03f;
+
+        final float values[] = new float[9];
+        imageMatrix().getValues(values);
+        float mScale = values[Matrix.MSCALE_X];
+
+        int w = (drawableWidth) / 2;
+        int h = (drawableHeight) / 2;
+
+        if (MovePageAction.CENTER == event.getAction()) {
+            LOG.d("Action center", event.getPage());
+            PageImageState.get().isAutoFit = true;
+            onAutoFit(new MessageAutoFit(event.getPage()));
+            return;
+        }
+
+        if (MovePageAction.LEFT == event.getAction()) {
+            imageMatrix().postTranslate(-1 * k, 0);
+        } else if (MovePageAction.RIGHT == event.getAction()) {
+            imageMatrix().postTranslate(k, 0);
+        } else if (MovePageAction.UP == event.getAction()) {
+            imageMatrix().postTranslate(0, k * -1);
+        } else if (MovePageAction.DOWN == event.getAction()) {
+            imageMatrix().postTranslate(0, k);
+        } else if (MovePageAction.ZOOM_PLUS == event.getAction()) {
+            imageMatrix().postScale(1 + scale, 1 + scale, w, h);
+        } else if (MovePageAction.ZOOM_MINUS == event.getAction()) {
+            imageMatrix().postScale(1 - scale, 1 - scale, w, h);
+        }
+        LOG.d("MMM SCALE", mScale);
+
+        PageImageState.get().isAutoFit = false;
+        invalidateAndMsg();
+
+    }
+
+    @Subscribe
     public void onCenterHorizontally(MessageCenterHorizontally event) {
         LOG.d("onCenterHorizontally recive");
         if (pageNumber == event.getPage()) {
@@ -179,7 +230,6 @@ public class PageImaveView extends View {
     static volatile boolean prevLock = false;
 
     class ImageSimpleGestureListener extends GestureDetector.SimpleOnGestureListener {
-        private final int DP_5 = Dips.dpToPx(10);
 
         @Override
         public boolean onDoubleTap(final MotionEvent e) {
@@ -187,29 +237,42 @@ public class PageImaveView extends View {
             if (clickUtils.isClickCenter(e.getX(), e.getY())) {
                 isLognPress = true;
 
-                if (isFirstZoomInOut) {
-                    // imageMatrix().reset();
-                    imageMatrix().preTranslate(getWidth() / 2 - e.getX(), getHeight() / 2 - e.getY());
-                    imageMatrix().postScale(2.5f, 2.5f, getWidth() / 2, getHeight() / 2);
-                    isFirstZoomInOut = false;
-                    prevLock = AppState.get().isLocked;
-                    AppState.get().isLocked = false;
-                    // invalidate();
-                    invalidateAndMsg();
-                    PageImageState.get().isAutoFit = false;
+                if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_NOTHING) {
 
-                } else {
-                    AppState.get().isLocked = prevLock;
-                    if (TempHolder.get().isTextFormat) {
-                        AppState.get().isLocked = true;
+                } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_ZOOM_IN_OUT) {
+                    if (isFirstZoomInOut) {
+                        imageMatrix().preTranslate(getWidth() / 2 - e.getX(), getHeight() / 2 - e.getY());
+                        imageMatrix().postScale(2.5f, 2.5f, getWidth() / 2, getHeight() / 2);
+                        isFirstZoomInOut = false;
+                        prevLock = AppState.get().isLocked;
+                        AppState.get().isLocked = false;
+                        invalidateAndMsg();
+                        PageImageState.get().isAutoFit = false;
+
+                    } else {
+                        AppState.get().isLocked = prevLock;
+                        if (TempHolder.get().isTextFormat) {
+                            AppState.get().isLocked = true;
+                        }
+                        isLognPress = true;
+                        PageImageState.get().isAutoFit = true;
+                        autoFit();
+                        invalidateAndMsg();
+                        isFirstZoomInOut = true;
+
                     }
-                    isLognPress = true;
+                } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_BOOK) {
+                    EventBus.getDefault().post(new MessageEvent(MessageEvent.MESSAGE_CLOSE_BOOK, e.getX(), e.getY()));
+                } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_BOOK_AND_APP) {
+                    EventBus.getDefault().post(new MessageEvent(MessageEvent.MESSAGE_CLOSE_BOOK_APP, e.getX(), e.getY()));
+                } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_HIDE_APP) {
+                    Apps.showDesctop(getContext());
+                } else {
                     PageImageState.get().isAutoFit = true;
                     autoFit();
                     invalidateAndMsg();
-                    isFirstZoomInOut = true;
-
                 }
+
                 EventBus.getDefault().post(new MessageEvent(MessageEvent.MESSAGE_DOUBLE_TAP, e.getX(), e.getY()));
                 return true;
             }
@@ -219,6 +282,10 @@ public class PageImaveView extends View {
 
         @Override
         public boolean onFling(final MotionEvent e1, final MotionEvent e2, final float velocityX, final float velocityY) {
+            isIgronerClick = true;
+            if (e1.getX() < BrightnessHelper.BRIGHTNESS_WIDTH) {
+                return false;
+            }
             if (AppState.get().selectedText != null) {
                 return false;
             }
@@ -234,19 +301,17 @@ public class PageImaveView extends View {
 
         @Override
         public void onLongPress(MotionEvent e) {
-            if (!AppState.get().longTapEnable) {
+            isIgronerClick = true;
+            Vibro.vibrate();
+            if (!AppState.get().longTapEnable || AppState.get().isCut || AppState.get().isCrop) {
+                Toast.makeText(LibreraApp.context, R.string.the_page_is_clipped_the_text_selection_does_not_work, Toast.LENGTH_LONG).show();
                 return;
             }
             isLognPress = true;
             xInit = e.getX();
             yInit = e.getY();
             String selectText = selectText(xInit, yInit, e.getX(), e.getY());
-            if (TxtUtils.isNotEmpty(selectText)) {
-                if (AppState.get().isVibration) {
-                    Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-                    v.vibrate(50);
-                }
-            } else {
+            if (TxtUtils.isEmpty(selectText)) {
                 AppState.get().selectedText = null;
             }
         }
@@ -260,6 +325,7 @@ public class PageImaveView extends View {
                 scroller.forceFinished(true);
                 x = event.getX();
                 y = event.getY();
+                brightnessHelper.onActoinDown(x, y);
                 isReadyForMove = false;
                 isLognPress = false;
             } else if (action == MotionEvent.ACTION_MOVE) {
@@ -273,18 +339,20 @@ public class PageImaveView extends View {
                     } else {
 
                         if (AppState.get().rotateViewPager == 0) {
-                            if (Math.abs(dy) > Math.abs(dx / 1.5) && (Math.abs(dy) + Math.abs(dx) > DP_5)) {
+                            if (Math.abs(dy) > Math.abs(dx) && (Math.abs(dy) + Math.abs(dx) > Dips.DP_10)) {
                                 isReadyForMove = true;
                                 isIgronerClick = true;
                             }
                         } else {
-                            if (Math.abs(dx) > Math.abs(dy / 1.5) && (Math.abs(dx) + Math.abs(dy) > DP_5)) {
+                            if (Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) + Math.abs(dy) > Dips.DP_10)) {
                                 isReadyForMove = true;
                                 isIgronerClick = true;
                             }
                         }
 
-                        if (isReadyForMove && !AppState.get().isLocked) {
+                        boolean isBrightness = brightnessHelper.onActionMove(event);
+
+                        if (!isBrightness && isReadyForMove && !AppState.get().isLocked) {
 
                             imageMatrix().postTranslate(dx, dy);
 
@@ -294,7 +362,9 @@ public class PageImaveView extends View {
                             x = event.getX();
                             y = event.getY();
                         }
+
                     }
+
                 }
 
                 if (event.getPointerCount() == 2) {
@@ -318,7 +388,7 @@ public class PageImaveView extends View {
                     final float values[] = new float[9];
                     imageMatrix().getValues(values);
 
-                    if (!AppState.get().isLocked) {
+                    if (true || !AppState.get().isLocked) {
                         LOG.d("postScale", scale, values[Matrix.MSCALE_X]);
                         if (values[Matrix.MSCALE_X] > 0.3f || scale > 1) {
                             imageMatrix().postScale(scale, scale, centerX, centerY);
@@ -326,7 +396,7 @@ public class PageImaveView extends View {
                     }
                     final float dx = centerX - cx;
                     final float dy = centerY - cy;
-                    if (!AppState.get().isLocked) {
+                    if (true || !AppState.get().isLocked) {
                         imageMatrix().postTranslate(dx, dy);
                     }
                     cx = centerX(event);
@@ -354,6 +424,7 @@ public class PageImaveView extends View {
                 distance = 0;
 
             } else if (action == MotionEvent.ACTION_UP) {
+                brightnessHelper.onActionUp();
 
                 LOG.d("TEST", "action ACTION_UP", "long: " + isLognPress);
                 distance = 0;
@@ -460,7 +531,7 @@ public class PageImaveView extends View {
     protected void onDraw(final Canvas canvas) {
         super.onDraw(canvas);
         try {
-            if (AppState.get().isOLED && MagicHelper.getBgColor() == Color.BLACK) {
+            if (AppState.get().isOLED && !AppState.get().isDayNotInvert /* && MagicHelper.getBgColor() == Color.BLACK */) {
                 canvas.drawColor(Color.BLACK);
             } else {
                 canvas.drawColor(MagicHelper.ligtherColor(MagicHelper.getBgColor()));
@@ -487,11 +558,12 @@ public class PageImaveView extends View {
                 }
             }
 
-            if (AppState.get().isOLED && !AppState.get().isInvert && !TempHolder.get().isTextFormat) {
+            if (AppState.get().isOLED && !AppState.get().isDayNotInvert /* && !TempHolder.get().isTextFormat */) {
                 canvas.drawRect(-dp1, 0, drawableWidth + dp1, drawableHeight, rect);
             }
 
             canvas.restoreToCount(saveCount);
+
         } catch (Exception e) {
             LOG.e(e);
         }

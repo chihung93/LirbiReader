@@ -1,9 +1,12 @@
 package com.foobnix.ui2.fragment;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
@@ -14,6 +17,7 @@ import com.foobnix.pdf.info.FileMetaComparators;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.io.SearchCore;
+import com.foobnix.pdf.info.view.MyPopupMenu;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.PopupHelper;
 import com.foobnix.ui2.AppDB;
@@ -41,7 +45,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 
 public class BrowseFragment2 extends UIFragment<FileMeta> {
@@ -65,7 +68,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
     private int fragmentType = TYPE_DEFAULT;
     private String fragmentText = "";
-    int rememberPos;
+    Map<String, Integer> rememberPos = new HashMap<String, Integer>();
 
     public BrowseFragment2() {
         super();
@@ -177,25 +180,65 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
             @Override
             public void onClick(View v) {
 
-                List<String> externalStorageDirectories = ExtUtils.getExternalStorageDirectories(getActivity());
-                if (externalStorageDirectories != null && !externalStorageDirectories.isEmpty()) {
-                    externalStorageDirectories.add(0, Environment.getExternalStorageDirectory().getPath());
-                    PopupMenu menu = new PopupMenu(getActivity(), onHome);
-                    for (final String info : externalStorageDirectories) {
-                        menu.getMenu().add(new File(info).getName()).setOnMenuItemClickListener(new OnMenuItemClickListener() {
-
-                            @Override
-                            public boolean onMenuItemClick(MenuItem item) {
-                                setDirPath(info);
-                                return false;
-                            }
-                        });
-                    }
-                    menu.show();
-                } else {
-                    File downloads = Environment.getExternalStorageDirectory();
-                    setDirPath(downloads.getPath());
+                List<String> extFolders = ExtUtils.getExternalStorageDirectories(getActivity());
+                String sdPath = ExtUtils.getSDPath();
+                if (TxtUtils.isNotEmpty(sdPath) && !extFolders.contains(sdPath)) {
+                    extFolders.add(sdPath);
                 }
+
+                MyPopupMenu menu = new MyPopupMenu(getActivity(), onHome);
+
+                menu.getMenu().add(R.string.internal_storage).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        setDirPath(Environment.getExternalStorageDirectory().getPath());
+                        return false;
+                    }
+                }).setIcon(R.drawable.glyphicons_441_folder_closed);
+
+                for (final String info : extFolders) {
+                    menu.getMenu().add(new File(info).getName()).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            setDirPath(info);
+                            return false;
+                        }
+                    }).setIcon(R.drawable.glyphicons_441_folder_closed);
+
+                }
+
+                menu.getMenu().add("Librera").setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        setDirPath(AppState.get().downlodsPath);
+                        return false;
+                    }
+                }).setIcon(R.drawable.glyphicons_591_folder_heart);
+
+                List<FileMeta> starFolders = AppDB.get().getStarsFolder();
+                List<String> names = new ArrayList<String>();
+                for (FileMeta f : starFolders) {
+                    names.add(f.getPath());
+                }
+
+                Collections.sort(names, String.CASE_INSENSITIVE_ORDER);
+
+                for (final String info : names) {
+                    menu.getMenu().add(new File(info).getName()).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            setDirPath(info);
+                            return false;
+                        }
+                    }).setIcon(R.drawable.glyphicons_50_star);
+
+                }
+
+                menu.show();
 
             }
         });
@@ -248,16 +291,18 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
                 List<String> names = Arrays.asList(//
                         getActivity().getString(R.string.by_file_name), //
                         getActivity().getString(R.string.by_date), //
-                        getActivity().getString(R.string.by_size) //
+                        getActivity().getString(R.string.by_size), //
+                        getActivity().getString(R.string.by_number) //
                 );//
 
                 final List<Integer> ids = Arrays.asList(//
                         AppState.BR_SORT_BY_PATH, //
                         AppState.BR_SORT_BY_DATE, //
-                        AppState.BR_SORT_BY_SIZE //
+                        AppState.BR_SORT_BY_SIZE, //
+                        AppState.BR_SORT_BY_NUMBER //
                 );//
 
-                PopupMenu menu = new PopupMenu(getActivity(), v);
+                MyPopupMenu menu = new MyPopupMenu(getActivity(), v);
                 for (int i = 0; i < names.size(); i++) {
                     String name = names.get(i);
                     final int j = i;
@@ -328,7 +373,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
     @Override
     public List<FileMeta> prepareDataInBackground() {
-        return SearchCore.getFilesAndDirs(getInitPath());
+        return SearchCore.getFilesAndDirs(getInitPath(), fragmentType == TYPE_DEFAULT);
     }
 
     @Override
@@ -338,31 +383,47 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
     public boolean onBackAction() {
         File file = new File(AppState.get().dirLastPath);
-        if (recyclerView != null && file.getParent() != null) {
-            recyclerView.scrollToPosition(rememberPos);
-            setDirPath(file.getParent());
+        String path = file.getParent();
+        if (recyclerView != null && path != null) {
+            int pos = rememberPos.get(path) == null ? 0 : rememberPos.get(path);
+            setDirPath(path);
+            recyclerView.scrollToPosition(pos);
             return true;
         }
         return false;
     }
 
     public void setDirPath(String path) {
+        if (path != null) {
+            path = path.replace("//", "/");
+        }
         setDirPath(path, null);
+        onGridList();
     }
 
+    String prevPath;
+
     public void setDirPath(final String path, List<FileMeta> items) {
+        LOG.d("setDirPath", path);
         if (searchAdapter == null) {
             return;
         }
+        
 
-        rememberPos = ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstVisibleItemPosition();
+        if (!path.equals(prevPath)) {
+            int pos = ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstVisibleItemPosition();
+            rememberPos.put(prevPath, pos);
+            LOG.d("rememberPos", path, pos);
+        }
+        prevPath = path;
+
 
         if (AppDB.get().isStarFolder(path)) {
             starIcon.setImageResource(R.drawable.star_1);
         } else {
             starIcon.setImageResource(R.drawable.star_2);
         }
-        TintUtil.setTintImage(starIcon, Color.WHITE);
+        TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
 
         starIcon.setOnClickListener(new OnClickListener() {
 
@@ -384,7 +445,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
         searchAdapter.clearItems();
         if (items == null) {
-            items = SearchCore.getFilesAndDirs(path);
+            items = SearchCore.getFilesAndDirs(path, fragmentType == TYPE_DEFAULT);
         }
 
         if (AppState.get().sortByBrowse == AppState.BR_SORT_BY_PATH) {
@@ -393,11 +454,24 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
             Collections.sort(items, FileMetaComparators.BY_DATE);
         } else if (AppState.get().sortByBrowse == AppState.BR_SORT_BY_SIZE) {
             Collections.sort(items, FileMetaComparators.BY_SIZE);
+        } else if (AppState.get().sortByBrowse == AppState.BR_SORT_BY_NUMBER) {
+            Collections.sort(items, FileMetaComparators.BR_BY_NUMBER);
         }
         if (AppState.get().sortByReverse) {
             Collections.reverse(items);
         }
         Collections.sort(items, FileMetaComparators.DIRS);
+
+        for (int i = 0; i < items.size(); i++) {
+            FileMeta m = items.get(i);
+            if (m.getCusType() == null) {// directory
+                LOG.d("DISPALY_TYPE_LAYOUT_TITLE_FOLDERS", i);
+                FileMeta it = new FileMeta();
+                it.setCusType(FileMetaAdapter.DISPALY_TYPE_LAYOUT_TITLE_NONE);
+                items.add(i, it);
+                break;
+            }
+        }
 
         searchAdapter.getItemsList().addAll(items);
         recyclerView.setAdapter(searchAdapter);
@@ -434,21 +508,21 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
                 if (i == split.length - 1) {
                     item.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-                } else {
-                    item.setOnClickListener(new OnClickListener() {
-
-                        @Override
-                        public void onClick(View v) {
-                            StringBuilder builder = new StringBuilder();
-                            for (int j = 0; j <= index; j++) {
-                                builder.append("/");
-                                builder.append(split[j]);
-                            }
-                            String itemPath = builder.toString();
-                            setDirPath(itemPath);
-                        }
-                    });
                 }
+
+                item.setOnClickListener(new OnClickListener() {
+
+                    @Override
+                    public void onClick(View v) {
+                        StringBuilder builder = new StringBuilder();
+                        for (int j = 0; j <= index; j++) {
+                            builder.append("/");
+                            builder.append(split[j]);
+                        }
+                        String itemPath = builder.toString();
+                        setDirPath(itemPath);
+                    }
+                });
 
                 paths.addView(slash);
                 paths.addView(item, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT));
@@ -465,6 +539,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
             public void run() {
                 scroller.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
             }
+
         }, 100);
 
     }
@@ -475,7 +550,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
     }
 
     private void popupMenu(final ImageView onGridList) {
-        PopupMenu p = new PopupMenu(getActivity(), onGridList);
+        MyPopupMenu p = new MyPopupMenu(getActivity(), onGridList);
         PopupHelper.addPROIcon(p, getActivity());
 
         List<Integer> names = Arrays.asList(R.string.list, R.string.compact, R.string.grid, R.string.cover);
@@ -488,7 +563,7 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
-                    AppState.getInstance().broseMode = actions.get(index);
+                    AppState.get().broseMode = actions.get(index);
                     onGridList.setImageResource(icons.get(index));
                     onGridList();
                     return false;
@@ -498,25 +573,11 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
         p.show();
 
-        PopupHelper.initIcons(p, TintUtil.color);
     }
 
     @Override
     public boolean isBackPressed() {
         return onBackAction();
-    }
-
-    @Override
-    public void notifyFragment() {
-        if (searchAdapter != null) {
-            searchAdapter.notifyDataSetChanged();
-            populate();
-        }
-    }
-
-    @Override
-    public void resetFragment() {
-        onGridList();
     }
 
     public void setOnPositiveAction(ResultResponse<String> onPositiveAction) {
@@ -525,6 +586,19 @@ public class BrowseFragment2 extends UIFragment<FileMeta> {
 
     public void setOnCloseAction(ResultResponse<String> onCloseAction) {
         this.onCloseAction = onCloseAction;
+    }
+
+    @Override
+    public void notifyFragment() {
+        if (searchAdapter != null) {
+            searchAdapter.notifyDataSetChanged();
+        }
+    }
+
+    @Override
+    public void resetFragment() {
+        onGridList();
+        populate();
     }
 
 }

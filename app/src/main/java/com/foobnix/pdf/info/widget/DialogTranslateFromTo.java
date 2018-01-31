@@ -3,7 +3,10 @@ package com.foobnix.pdf.info.widget;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+
+import org.ebookdroid.LibreraApp;
 
 import com.foobnix.android.utils.BaseItemLayoutAdapter;
 import com.foobnix.android.utils.TxtUtils;
@@ -125,6 +128,18 @@ public class DialogTranslateFromTo {
     }
 
     public static String getLanuageByCode(String code) {
+        if (LibreraApp.context == null) {
+            return "";
+        }
+        if (AppState.MY_SYSTEM_LANG.equals(code)) {
+            return LibreraApp.context.getString(R.string.system_language);
+        }
+        try {
+            Locale l = new Locale(code);
+            return TxtUtils.firstUppercase(l.getDisplayLanguage(l));
+        } catch (Exception e) {
+        }
+
         if (TxtUtils.isEmpty(code)) {
             return "";
         }
@@ -137,7 +152,7 @@ public class DialogTranslateFromTo {
                 return key;
             }
         }
-        return "";
+        return code;
     }
 
     public static Spanned getSelectedDictionaryUnderline() {

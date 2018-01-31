@@ -1,10 +1,12 @@
 package com.foobnix.ui2.adapter;
 
 import com.foobnix.android.utils.Dips;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.ResultResponse;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.opds.Entry;
 import com.foobnix.opds.Link;
+import com.foobnix.opds.SamlibOPDS;
 import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
@@ -12,6 +14,7 @@ import com.foobnix.pdf.info.Urls;
 import com.foobnix.pdf.info.view.EditTextHelper;
 import com.foobnix.pdf.info.view.ScaledImageView;
 import com.foobnix.pdf.info.widget.FileInformationDialog;
+import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.ui2.AppRecycleAdapter;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
@@ -25,6 +28,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -101,6 +105,10 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                 holder.expand.setVisibility(View.GONE);
             }
 
+            if (AppState.get().isInkMode) {
+                // holder.expand.setTextColor(Color.GRAY);
+            }
+
         } else {
             holder.content.setVisibility(View.GONE);
             holder.expand.setVisibility(View.GONE);
@@ -115,7 +123,11 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                     onRemoveLinkClickListener.onResultRecive(entry);
                 }
             });
+            if (SamlibOPDS.isSamlibUrl(entry.homeUrl)) {
+                holder.remove.setVisibility(View.GONE);
+            }
         } else {
+
             holder.remove.setVisibility(View.GONE);
         }
 
@@ -132,6 +144,9 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                     }
                 });
             } else {
+            }
+            if (AppState.get().isInkMode) {
+                // holder.author.setTextColor(Color.GRAY);
             }
         } else {
             holder.author.setVisibility(View.GONE);
@@ -162,6 +177,9 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
             if (link.TYPE_LOGO.equals(link.type) || link.isThumbnail()) {
                 holder.image.setVisibility(View.VISIBLE);
                 ImageLoader.getInstance().displayImage(link.href, holder.image, IMG.displayOPDSOptions);
+                if (AppState.get().isInkMode) {
+                    // TintUtil.grayScaleImageView(holder.image);
+                }
             } else if (link.isSearchLink()) {
                 LinearLayout l = new LinearLayout(context);
                 l.setOrientation(LinearLayout.HORIZONTAL);
@@ -176,7 +194,7 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                 final ImageView button = new ImageView(context);
                 button.setMinimumWidth(Dips.dpToPx(42));
                 button.setImageResource(R.drawable.glyphicons_28_search);
-                TintUtil.setTintImage(button);
+                TintUtil.setTintImageWithAlpha(button);
 
                 l.addView(search, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1.0f));
                 l.addView(button, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 0.0f));
@@ -190,6 +208,8 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                             String replace = link.href.replace("{searchterms}", encode).replace("{searchTerms}", encode);
                             Link l = new Link(replace);
                             onLinkClickListener.onResultRecive(l);
+
+                            Keyboards.close(search);
                         } else {
                             Toast.makeText(context, R.string.incorrect_value, Toast.LENGTH_SHORT).show();
                         }
@@ -212,10 +232,13 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                         continue;
                     }
                 }
-                if (!link.href.equals(imgLink)) {
+                if (!link.href.equals(imgLink) && AppState.get().opdsLargeCovers) {
                     ScaledImageView img = new ScaledImageView(holder.parent.getContext());
                     img.setPadding(PD, PD, PD, PD);
-                    ImageLoader.getInstance().displayImage(link.href, img, IMG.displayImageOptions);
+                    ImageLoader.getInstance().displayImage(link.href, img, IMG.displayCacheMemoryDisc);
+                    if (AppState.get().isInkMode) {
+                        // TintUtil.grayScaleImageView(img);
+                    }
                     holder.links.addView(img, new LinearLayout.LayoutParams(Dips.screenWidth() / 2, LayoutParams.WRAP_CONTENT));
                     imgLink = link.href;
 
@@ -223,7 +246,7 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
 
                         @Override
                         public void onClick(View v) {
-                            FileInformationDialog.showImage1(context, link.href);
+                            FileInformationDialog.showImageHttpPath(context, link.href);
 
                         }
                     });
@@ -238,12 +261,21 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
             } else {
                 TextView t = new TextView(holder.parent.getContext());
                 t.setPadding(PD, PD, PD, PD);
+
                 t.setOnClickListener(new OnClickListener() {
 
                     @Override
                     public void onClick(View v) {
                         onLinkClickListener.onResultRecive(link);
 
+                    }
+                });
+                t.setOnLongClickListener(new OnLongClickListener() {
+
+                    @Override
+                    public boolean onLongClick(View v) {
+                        holder.parent.performLongClick();
+                        return false;
                     }
                 });
 
@@ -273,7 +305,14 @@ public class EntryAdapter extends AppRecycleAdapter<Entry, RecyclerView.ViewHold
                 } else {
                     t.setText(link.title != null ? link.title : link.type);
                     t.setTextColor(context.getResources().getColor(R.color.tint_blue));
-                    t.setBackgroundResource(R.drawable.bg_clickable);
+                    // t.setBackgroundResource(R.drawable.bg_clickable);
+                    // if (link.type != null && link.type.contains(Entry.MY_CATALOG)) {
+                    // t.setBackgroundColor(Color.TRANSPARENT);
+                    // }
+
+                    if (AppState.get().isInkMode) {
+                        // t.setTextColor(Color.GRAY);
+                    }
                     holder.links.addView(t);
                 }
 

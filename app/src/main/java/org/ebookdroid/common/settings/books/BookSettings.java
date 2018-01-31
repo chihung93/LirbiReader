@@ -1,5 +1,6 @@
 package org.ebookdroid.common.settings.books;
 
+import org.ebookdroid.common.settings.SettingsManager;
 import org.ebookdroid.common.settings.types.DocumentViewMode;
 import org.ebookdroid.core.PageIndex;
 import org.ebookdroid.core.events.CurrentPageListener;
@@ -8,6 +9,7 @@ import org.json.JSONObject;
 
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.sys.TempHolder;
 
 public class BookSettings implements CurrentPageListener {
 
@@ -25,10 +27,12 @@ public class BookSettings implements CurrentPageListener {
     public float offsetX;
     public float offsetY;
 
-    public int speed = AppState.getInstance().autoScrollSpeed;
+    public int speed = AppState.get().autoScrollSpeed;
 
     public boolean autoLevels;
     private int pages;
+    public int pageDelta = 0;
+
 
     public BookSettings(final String fileName) {
         this.fileName = fileName;
@@ -38,12 +42,21 @@ public class BookSettings implements CurrentPageListener {
         }
     }
 
+    public boolean isTextFormat() {
+        return ExtUtils.isTextFomat(fileName);
+    }
+
     public void updateFromAppState() {
         cropPages = AppState.get().isCrop;
         doublePages = AppState.get().isDouble;
         splitPages = AppState.get().isCut;
         doublePagesCover = AppState.get().isDoubleCoverAlone;
         isLocked = AppState.get().isLocked;
+        pageDelta = TempHolder.get().pageDelta;
+    }
+
+    public void save() {
+        SettingsManager.db.storeBookSettings(this);
     }
 
     BookSettings(final JSONObject object) throws JSONException {
@@ -60,6 +73,7 @@ public class BookSettings implements CurrentPageListener {
         this.splitPages = object.optBoolean("splitPages", splitPages);
         this.speed = object.optInt("speed", speed);
         this.pages = object.optInt("pages", pages);
+        this.pageDelta = object.optInt("pageDelta", pageDelta);
     }
 
     JSONObject toJSON() throws JSONException {
@@ -77,13 +91,18 @@ public class BookSettings implements CurrentPageListener {
         obj.put("splitPages", splitPages);
         obj.put("speed", speed);
         obj.put("pages", pages);
+        obj.put("pageDelta", pageDelta);
         return obj;
     }
 
     @Override
-    public void currentPageChanged(final PageIndex oldIndex, final PageIndex newIndex, int pages) {
+    public void currentPageChanged(final PageIndex newIndex, int pages) {
         this.currentPage = newIndex;
         this.pages = pages;
+    }
+
+    public void currentPageChanged(final int page) {
+        this.currentPage = new PageIndex(page, page);
     }
 
     public PageIndex getCurrentPage() {

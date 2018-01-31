@@ -13,7 +13,9 @@ import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.pdf.CopyAsyncTask;
 import com.foobnix.pdf.info.view.AlertDialogs;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.pdf.reader.R;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -21,10 +23,10 @@ import android.content.DialogInterface.OnClickListener;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
-import com.foobnix.pdf.reader.R;
 
 public class AndroidWhatsNew {
 
+    public static final String DETAIL_URL_RU = "https://drive.google.com/open?id=1qXdmPNP4rr_pBfJSSy5QRQvW_Kyb-NN-";
     private static final String BETA_TXT = "changelog.txt";
     private static final String BETA = "beta-";
 
@@ -51,25 +53,24 @@ public class AndroidWhatsNew {
             @Override
             public void onClick(View v) {
                 try {
-                    notes.setText(steamToString(c.getResources().getAssets().open(BETA_TXT)));
+                    // notes.setText(steamToString(c.getResources().getAssets().open(BETA_TXT)));
+                    Urls.open(c, DETAIL_URL_RU);
                 } catch (Exception e) {
                     LOG.e(e);
                 }
             }
         });
 
-        if (AppsConfig.IS_BETA) {
-            ((View) textRateIt.getParent()).setVisibility(View.GONE);
-            fontSectionDivider.setVisibility(View.GONE);
-        }
+        ((View) textRateIt.getParent()).setVisibility(View.GONE);
+        fontSectionDivider.setVisibility(View.GONE);
 
         String textNotes = "loading...";
         try {
-            String langCode = Urls.getLangCode();
+            String langCode = AppState.get().appLang;
             textNotes = getWhatsNew(c, langCode);
         } catch (Exception e) {
             try {
-                textNotes = getWhatsNew(c, "en");
+                textNotes = getWhatsNew(c, Urls.getLangCode());
             } catch (Exception e1) {
                 textNotes = "erorr...";
             }
@@ -79,7 +80,7 @@ public class AndroidWhatsNew {
         notes.setText(textNotes);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(c);
-        builder.setTitle(c.getString(R.string.what_is_new) + " " + AppsConfig.APP_NAME + " " + versionName);
+        builder.setTitle(c.getString(R.string.what_is_new_in) + " " + AppsConfig.TXT_APP_NAME + " " + versionName);
         builder.setView(inflate);
         builder.setNegativeButton(R.string.close, new OnClickListener() {
 
@@ -89,7 +90,7 @@ public class AndroidWhatsNew {
             }
         });
 
-        if (!AppsConfig.IS_BETA) {
+        if (false) {
             builder.setPositiveButton(R.string.write_feedback, new OnClickListener() {
 
                 @Override
@@ -103,15 +104,12 @@ public class AndroidWhatsNew {
     }
 
     public static String getWhatsNew(Context c, String langCode) throws IOException {
-        if (AppsConfig.IS_BETA) {
-            return steamToString(c.getResources().getAssets().open(BETA_TXT));
-        }
         InputStream input = c.getResources().getAssets().open("whatsnew/" + langCode + ".txt");
         return steamToString(input);
 
     }
 
-    public static void checkForNewBeta(final Context c) {
+    public static void checkForNewBeta(final Activity c) {
         if (!AppsConfig.IS_BETA) {
             return;
         }

@@ -1,7 +1,8 @@
-* Cărți gratuite în cataloage 
-* Adăugați link-uri de catalog la favorite 
-* Distribuție automată pentru limbi de carte 
-* Cumpărați liste de premii și liste de cărți de sus 
-* Sprijiniți catalogul FBReader personal 
-* Arătați toate seriile după Autor, după Gen 
-* Multe îmbunătățiri și corecții mici prin feedbackul dvs.
+* Îmbunătățirea vitezei de deschidere a tuturor formatelor și PDF, EPUB 
+* TemaInk pentru dispozitivele cu cerneală electronică 
+* Schimbarea contrastului și luminozității 
+* Luminozitate negativă 
+* Filtru Bluelight 
+* Interogări de completare automată în bibliotecă 
+* Interfață îmbunătățită 
+* Multe îmbunătățiri și corecții de erori

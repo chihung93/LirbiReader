@@ -15,18 +15,32 @@ import android.graphics.RectF;
 
 public class DjvuDocument extends AbstractCodecDocument {
 
+    private String fileName;
+
     DjvuDocument(final DjvuContext djvuContext, final String fileName) {
         super(djvuContext, open(djvuContext.getContextHandle(), fileName));
+        this.fileName = fileName;
+        LOG.d("MUPDF! open document djvu", documentHandle, fileName);
     }
 
     @Override
     public List<OutlineLink> getOutline() {
-        final DjvuOutline ou = new DjvuOutline();
-        return ou.getOutline(documentHandle);
+        TempHolder.lock.lock();
+        try {
+            final DjvuOutline ou = new DjvuOutline();
+            return ou.getOutline(documentHandle);
+        } finally {
+            TempHolder.lock.unlock();
+        }
     }
 
     @Override
-    public DjvuPage getPage(final int pageNumber) {
+    public String getMeta(String option) {
+        return "";
+    }
+
+    @Override
+    public DjvuPage getPageInner(final int pageNumber) {
         TempHolder.lock.lock();
         try {
             LOG.d("DjvuPage_getPage", pageNumber);
@@ -71,6 +85,7 @@ public class DjvuDocument extends AbstractCodecDocument {
     @Override
     protected void freeDocument() {
         free(documentHandle);
+        LOG.d("MUPDF! recycle document djvu", documentHandle, fileName);
     }
 
     private native static int getPageInfo(long docHandle, int pageNumber, long contextHandle, CodecPageInfo cpi);

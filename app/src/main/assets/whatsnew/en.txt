@@ -1,7 +1,8 @@
-* Free books in catalogs
-* Add catalog links to favorites
-* Automatic hyphenation for book language
-* Book awards lists and top books lists
-* Support personal FBReader catalog 
-* Show all series by Author, by Genre
-* Many improvements and small fixes by your feedback
+* Improved the speed of opening all formats and PDF, EPUB
+* Theme "Ink" for devices with electronic ink
+* Change the contrast and brightness
+* Negative brightness
+* Bluelight filter
+* Autocomplete queries in the library
+* Improved interface
+* Many improvements and bug fixes

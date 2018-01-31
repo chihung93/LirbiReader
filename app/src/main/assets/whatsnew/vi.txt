@@ -1,7 +1,8 @@
-* Miễn phí sách trong catalogue 
-* Thêm các liên kết vào danh mục yêu thích 
-* Dấu cách tự động cho ngôn ngữ của sách 
-* Danh sách sách giải thưởng và danh sách sách hàng đầu 
-* Hỗ trợ danh mục cá nhân của FBReader 
-* Hiển thị tất cả các chuỗi theo tác giả, theo thể loại 
-* Nhiều cải tiến và sửa lỗi nhỏ theo phản hồi của bạn
+* Tăng tốc độ mở các định dạng và PDF, EPUB 
+* ThemeInk cho các thiết bị có mực điện tử 
+* Thay đổi độ tương phản và độ sáng 
+* Độ sáng tiêu cực 
+* Bộ lọc Bluelight 
+* Truy vấn tự động trong thư viện 
+* Cải thiện giao diện 
+* Nhiều cải tiến và sửa lỗi

@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.foobnix.pdf.reader"
     android:installLocation="auto"
-    android:versionCode="469"
-    android:versionName="7.2.26" >
+    android:versionCode="476"
+    android:versionName="7.5.50" >
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -11,13 +11,13 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- android:name="com.foobnix.pdf.info.TestAppName" -->
     <application
-        android:name="org.ebookdroid.LirbiApp"
+        android:name="org.ebookdroid.LibreraApp"
         android:icon="@drawable/icon_pdf_reader"
         android:label="@string/app_name"
         android:largeHeap="true"
@@ -54,7 +54,33 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="org.ebookdroid.ui.viewer.ViewerActivity"
+            android:name="com.foobnix.pdf.search.activity.HorizontalViewActivity"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:screenOrientation="behind"
+            android:windowSoftInputMode="adjustPan" >
+        </activity>
+        <activity android:name="test.MimeTestActivity" >
+            <!--
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:host="*"  />
+                <data android:scheme="content" android:host="*"/>
+            </intent-filter>
+             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="*/*" android:pathPattern=""/>
+            </intent-filter>
+             -->
+        </activity>
+        <activity
+            android:name="org.ebookdroid.ui.viewer.VerticalViewActivity"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"
@@ -66,7 +92,6 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data android:host="*" />
                 <data android:scheme="file" />
                 <data android:scheme="content" />
@@ -97,17 +122,15 @@
                 <data android:mimeType="image/x-djvu" />
                 <data android:mimeType="image/x.djvu" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="image/tiff" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data android:host="*" />
                 <data android:scheme="file" />
                 <data android:scheme="content" />
-                <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\.txt" />
                 <data android:pathPattern=".*\\.epub" />
                 <data android:pathPattern=".*\\.fb2" />
@@ -122,9 +145,10 @@
                 <data android:pathPattern=".*\\.azw" />
                 <data android:pathPattern=".*\\.azw3" />
                 <data android:pathPattern=".*\\.azw4" />
-                <data android:pathPattern=".*\\.pdf" />
                 <data android:pathPattern=".*\\.prc" />
                 <data android:pathPattern=".*\\.cbz" />
+                <data android:pathPattern=".*\\.cbr" />
+                <data android:pathPattern=".*\\.tiff" />
             </intent-filter>
         </activity>
 
@@ -164,9 +188,23 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.foobnix.ui2.MainTabs2"
-            android:exported="true"
+            android:name="com.test.TestAdsActivity"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true"
+            android:screenOrientation="behind"
+            android:windowSoftInputMode="stateHidden" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN1" />
+
+                <category android:name="android.intent.category.LAUNCHER1" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.foobnix.ui2.MainTabs2"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:exported="true"
             android:launchMode="singleTop"
             android:resizeableActivity="true"
             android:screenOrientation="behind"
@@ -174,46 +212,29 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <action android:name="android.intent.action.PROCESS_TEXT1" />
 
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.DEFAULT1" />
 
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.SEARCH" />
+                <action android:name="android.intent.action.SEARCH1" />
 
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.DEFAULT1" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND1" />
 
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.DEFAULT1" />
 
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="com.foobnix.pdf.search.activity.HorizontalViewActivity"
-            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:resizeableActivity="true"
-            android:screenOrientation="behind" >
-        </activity>
-
-        <!-- PLAY_SERVICE --><meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version"/>
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
-
         <activity
             android:name="com.google.android.gms.ads.AdActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
@@ -263,6 +284,10 @@
         <meta-data
             android:name="com.sec.android.multiwindow.MINIMUM_SIZE_H"
             android:value="598.0dip" />
+        <meta-data
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>

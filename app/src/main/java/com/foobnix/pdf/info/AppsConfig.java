@@ -1,92 +1,128 @@
 package com.foobnix.pdf.info;
 
+import java.util.Random;
+
 import com.foobnix.android.utils.LOG;
+import com.foobnix.pdf.reader.R;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
-import com.foobnix.pdf.reader.R;
 
 public class AppsConfig {
 
-    public static final String PRO_PDF_READER = "com.foobnix.pro.pdf.reader";
+    public static int MUPDF = 111;
 
-    public static final String PDF_READER_LIRBI = "com.foobnix.pdf.reader";
+    public static final String PRO_LIBRERA_READER = "com.foobnix.pro.pdf.reader";
 
-    public static final String CLASSIC_READER_PKG = "classic.pdf.reader.viewer.djvu.epub.fb2.txt.mobi.book.reader.lirbi.libri";
+    public static final String LIBRERA_READER = "com.foobnix.pdf.reader";
 
-    public static final String DROID_READER_PKG = "droid.reader.book.epub.mobi.pdf.djvu.fb2.txt.azw.azw3";
+    public static final String CLASSIC_PDF_READER = "classic.pdf.reader.viewer.djvu.epub.fb2.txt.mobi.book.reader.lirbi.libri";
 
-    public static String ADMOB_CLASSIC;
+    public static final String EBOOKA_READER = "droid.reader.book.epub.mobi.pdf.djvu.fb2.txt.azw.azw3";
 
+    public static final String LIBRERA_INK_EDITION = "mobi.librera.book.reader";
+
+    public static String ADMOB_BANNER;
     public static String ADMOB_FULLSCREEN;
-    public static String ADMOB_NATIVE_BIG;
-    public static String ADMOB_NATIVE_SMALL;
+    public static String ADMOB_NATIVE_BANNER;
+
+    public static String EP_BANNER_NATIVE;
+    public static String EP_INTERSTITIAL;
 
     public static String ANALYTICS_ID;
 
-    public static boolean IS_APP_WITH_ANALITICS = true;
 
-    public static String APP_NAME;
     public static String APP_PACKAGE;
-    public static boolean IS_BETA, IS_CLASSIC;
+    public static boolean IS_BETA, IS_CLASSIC, IS_INK;
+
+    public static boolean IS_TEST_EP = false;
+
+    public static String TXT_APP_NAME;
+
+    static Random random = new Random();
 
     public static void init(final Context a) {
         final String packageName = a.getPackageName();
         LOG.d("init packageName", packageName);
 
-        APP_NAME = a.getString(R.string.app_name);
+        TXT_APP_NAME = a.getString(R.string.app_name);
+
         APP_PACKAGE = packageName;
 
-        IS_APP_WITH_ANALITICS = true;
 
-        if (PRO_PDF_READER.equals(packageName)) {
-            ADMOB_CLASSIC = null;
+
+        if (PRO_LIBRERA_READER.equals(packageName)) {
+            ADMOB_BANNER = null;
             ANALYTICS_ID = null;
-            IS_APP_WITH_ANALITICS = false;
             return;
         }
 
-
-        if (PDF_READER_LIRBI.equals(packageName)) {
+        if (LIBRERA_READER.equals(packageName)) {
             ANALYTICS_ID = "UA-36581296-2";
 
-            ADMOB_CLASSIC/*     */ = "ca-app-pub-8347903083053959/4166397275";
+            ADMOB_BANNER/*     */ = "ca-app-pub-8347903083053959/4166397275";
             ADMOB_FULLSCREEN/*  */ = "ca-app-pub-8347903083053959/2769081274";
-            ADMOB_NATIVE_BIG/*  */ = "ca-app-pub-8347903083053959/4245814471";
-            ADMOB_NATIVE_SMALL/**/ = "ca-app-pub-8347903083053959/5722547677";
+            ADMOB_NATIVE_BANNER/**/ = "ca-app-pub-8347903083053959/5722547677";
+            
+            EP_BANNER_NATIVE = "9cf064256b16a112cc1fd3fb42487dbd";
+            EP_INTERSTITIAL = "cd6563264b30c32814df5f0e1048079b";
+
         }
 
-        if (CLASSIC_READER_PKG.equals(packageName)) {
+        if (CLASSIC_PDF_READER.equals(packageName)) {
             IS_CLASSIC = true;
             ANALYTICS_ID = "UA-36581296-6";
 
-            ADMOB_CLASSIC/*     */ = "ca-app-pub-8347903083053959/5364245672";
-            ADMOB_FULLSCREEN/*  */ = "ca-app-pub-8347903083053959/7763820878";
-            ADMOB_NATIVE_BIG/*  */ = "ca-app-pub-8347903083053959/8961352478";
-            ADMOB_NATIVE_SMALL/**/ = "ca-app-pub-8347903083053959/8572902871";
+            ADMOB_BANNER/*       */ = "ca-app-pub-8347903083053959/5364245672";
+            ADMOB_FULLSCREEN/*   */ = "ca-app-pub-8347903083053959/7763820878";
+            ADMOB_NATIVE_BANNER/**/ = "ca-app-pub-8347903083053959/8572902871";
+
+            EP_BANNER_NATIVE = "45cb427bedf4118fd6983475ce7cfb3e";
+            EP_INTERSTITIAL = "c6d71b0cf97d5ca37764b26e8f365cf1";
+
         }
 
-        if (DROID_READER_PKG.equals(packageName)) {
+        if (EBOOKA_READER.equals(packageName)) {
+            ANALYTICS_ID = "UA-36581296-8";
+            ADMOB_BANNER/*     */ = "ca-app-pub-8347903083053959/6159730856";
+            ADMOB_FULLSCREEN/* */ = "ca-app-pub-8347903083053959/2346153515";
+            ADMOB_NATIVE_BANNER/**/ = null;
+
+            EP_BANNER_NATIVE = "ec263d6b75792d1e566a53f78b297cfc";
+            EP_INTERSTITIAL = "ff99040c9b6a825dbc8dfb56a8834225";
+
+        }
+        if (LIBRERA_INK_EDITION.equals(packageName)) {
+            IS_INK = true;
             ANALYTICS_ID = "UA-36581296-8";
 
-            ADMOB_CLASSIC/*     */ = "ca-app-pub-8347903083053959/5364245672";
-            ADMOB_FULLSCREEN/*  */ = "ca-app-pub-8347903083053959/7763820878";
-            ADMOB_NATIVE_BIG/*  */ = "ca-app-pub-8347903083053959/8961352478";
-            ADMOB_NATIVE_SMALL/**/ = "ca-app-pub-8347903083053959/8572902871";
+            ADMOB_BANNER/*     */ = "ca-app-pub-8347903083053959/5364245672";
+            ADMOB_FULLSCREEN/*  */ = null;
+            ADMOB_NATIVE_BANNER/**/ = "ca-app-pub-8347903083053959/8572902871";
+
         }
 
-        IS_BETA = APP_NAME.contains("Beta");
+        IS_BETA = TXT_APP_NAME.contains("Beta");
+
+        // IS_BETA = false;
+
         if (IS_BETA) {
             ANALYTICS_ID = "UA-36581296-9";
-            ADMOB_CLASSIC = ADMOB_FULLSCREEN = ADMOB_NATIVE_BIG = ADMOB_NATIVE_SMALL = null;
+            ADMOB_BANNER = ADMOB_FULLSCREEN = ADMOB_NATIVE_BANNER = null;
+            LOG.isEnable = true;
         }
+        if (IS_TEST_EP) {
+            EP_INTERSTITIAL = "0928de1630a1452b64eaab1813d3af64";
+            EP_BANNER_NATIVE = "ec5086312cf4959dcc54fe8a8ad15401";
+        }
+
 
     }
 
     public static boolean isDroidReaderPkg(Context c) {
         final String packageName = c.getPackageName();
-        return DROID_READER_PKG.equals(packageName);
+        return EBOOKA_READER.equals(packageName);
 
     }
 
@@ -94,12 +130,11 @@ public class AppsConfig {
         if (a == null) {
             return false;
         }
-        boolean is_pro = isPackageExisted(a, PRO_PDF_READER);
+        boolean is_pro = isPackageExisted(a, PRO_LIBRERA_READER);
         if (is_pro) {
-            ADMOB_CLASSIC = null;
+            ADMOB_BANNER = null;
             ADMOB_FULLSCREEN = null;
-            ADMOB_NATIVE_BIG = null;
-            ADMOB_NATIVE_SMALL = null;
+            ADMOB_NATIVE_BANNER = null;
         }
         return is_pro || IS_BETA;
     }

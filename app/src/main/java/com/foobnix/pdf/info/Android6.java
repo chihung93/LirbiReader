@@ -1,10 +1,13 @@
 package com.foobnix.pdf.info;
 
 import com.foobnix.android.utils.LOG;
+import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.pdf.reader.R;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -13,11 +16,17 @@ import android.os.Build;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import com.foobnix.pdf.reader.R;
 
 public class Android6 {
 
     public static final int MY_PERMISSIONS_REQUEST_WES = 1;
+
+    public static boolean canWrite(Context c) {
+        if(Build.VERSION.SDK_INT >= 23) {
+            return ContextCompat.checkSelfPermission(c, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
 
     public static void checkPermissions(final Activity a) {
 
@@ -53,6 +62,7 @@ public class Android6 {
             }
         } else {
             AndroidWhatsNew.checkWhatsNew(a);
+            FontExtractor.extractFonts(a);
         }
     }
 
@@ -60,6 +70,7 @@ public class Android6 {
         switch (requestCode) {
         case MY_PERMISSIONS_REQUEST_WES: {
             // If request is cancelled, the result arrays are empty.
+            AppState.get().save(a);
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (Build.VERSION.SDK_INT <= 22) {// kill to restart 22 ????fa
                     android.os.Process.killProcess(android.os.Process.myPid());

@@ -15,6 +15,8 @@
  */
 
 package com.foobnix.ui2.fast;
+
+
 import com.foobnix.pdf.reader.R;
 
 import android.animation.Animator;

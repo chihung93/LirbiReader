@@ -3,12 +3,15 @@ package com.foobnix.ui2.fragment;
 import java.util.Arrays;
 import java.util.List;
 
+import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.view.AlertDialogs;
+import com.foobnix.pdf.info.view.MyPopupMenu;
+import com.foobnix.pdf.info.widget.RecentUpates;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.PopupHelper;
 import com.foobnix.ui2.AppDB;
@@ -24,7 +27,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 
 public class RecentFragment2 extends UIFragment<FileMeta> {
@@ -58,11 +60,12 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
 
             @Override
             public void onClick(View v) {
-                AlertDialogs.showDialog(getActivity(), getString(R.string.clear_all_recent), getString(R.string.ok), new Runnable() {
+                AlertDialogs.showDialog(getActivity(), getString(R.string.do_you_want_to_clear_everything_), getString(R.string.ok), new Runnable() {
 
                     @Override
                     public void run() {
                         clearAllRecent.run();
+                        RecentUpates.updateAll(getActivity());
                     }
                 });
 
@@ -77,8 +80,8 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
         recentAdapter.setOnDeleteClickListener(onDeleteRecentClick);
 
         onGridList();
-
         populate();
+
         TintUtil.setBackgroundFillColor(panelRecent, TintUtil.color);
 
         return view;
@@ -96,6 +99,7 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
             result.setIsRecent(false);
             AppDB.get().update(result);
             populate();
+            RecentUpates.updateAll(getActivity());
             return false;
         }
     };
@@ -114,28 +118,26 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
     }
 
     @Override
-    public void onSelectFragment() {
-        populate();
-    }
-
-    @Override
     public List<FileMeta> prepareDataInBackground() {
         return AppDB.get().getAllRecentWithProgress();
     }
 
     @Override
     public void populateDataInUI(List<FileMeta> items) {
-        recentAdapter.getItemsList().clear();
-        recentAdapter.getItemsList().addAll(items);
-        recentAdapter.notifyDataSetChanged();
+        if (recentAdapter != null) {
+            recentAdapter.getItemsList().clear();
+            recentAdapter.getItemsList().addAll(items);
+            recentAdapter.notifyDataSetChanged();
+        }
     }
 
     public void onGridList() {
+        LOG.d("onGridList");
         onGridList(AppState.get().recentMode, onListGrid, recentAdapter, null);
     }
 
     private void popupMenu(final ImageView onGridList) {
-        PopupMenu p = new PopupMenu(getActivity(), onGridList);
+        MyPopupMenu p = new MyPopupMenu(getActivity(), onGridList);
         PopupHelper.addPROIcon(p, getActivity());
 
         List<Integer> names = Arrays.asList(R.string.list, R.string.compact, R.string.grid, R.string.cover);
@@ -148,7 +150,7 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
 
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
-                    AppState.getInstance().recentMode = actions.get(index);
+                    AppState.get().recentMode = actions.get(index);
                     onGridList.setImageResource(icons.get(index));
                     onGridList();
                     return false;
@@ -157,20 +159,17 @@ public class RecentFragment2 extends UIFragment<FileMeta> {
         }
 
         p.show();
-
-        PopupHelper.initIcons(p, TintUtil.color);
     }
 
     @Override
     public void notifyFragment() {
-        if (recentAdapter != null) {
-            recentAdapter.notifyDataSetChanged();
-        }
+        populate();
     }
 
     @Override
     public void resetFragment() {
-
+        onGridList();
+        populate();
     }
 
 }

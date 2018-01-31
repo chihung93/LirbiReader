@@ -3,7 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LirbiReader.iml" filepath="$PROJECT_DIR$/LirbiReader.iml" />
+      <module fileurl="file://$PROJECT_DIR$/MylibReader.iml" filepath="$PROJECT_DIR$/MylibReader.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/com.example.zcontentintent/com.example.zcontentintent.iml" filepath="$PROJECT_DIR$/com.example.zcontentintent/com.example.zcontentintent.iml" />
       <module fileurl="file://$PROJECT_DIR$/com.example.zcontentintent/com.example.zcontentintent.iml" filepath="$PROJECT_DIR$/com.example.zcontentintent/com.example.zcontentintent.iml" />
     </modules>
   </component>

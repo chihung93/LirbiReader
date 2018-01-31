@@ -7,10 +7,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
+import com.foobnix.android.utils.ResultResponse2;
 import com.foobnix.android.utils.TxtUtils;
-import com.foobnix.ext.CacheZipUtils;
 import com.foobnix.opds.Entry;
 import com.foobnix.opds.Feed;
 import com.foobnix.opds.Hrefs;
@@ -23,10 +24,14 @@ import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.Urls;
 import com.foobnix.pdf.info.view.AlertDialogs;
 import com.foobnix.pdf.info.widget.AddCatalogDialog;
+import com.foobnix.pdf.info.widget.ChooserDialogFragment;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.ui2.adapter.EntryAdapter;
 import com.foobnix.ui2.fast.FastScrollRecyclerView;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -34,11 +39,18 @@ import android.support.v4.util.Pair;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,8 +71,8 @@ public class OpdsFragment2 extends UIFragment<Entry> {
     String title;
     Stack<String> stack = new Stack<String>();
 
-    ImageView onPlus;
-    View onPlusView, pathContainer;
+    ImageView onPlus, onProxy;
+    View pathContainer, view1, view2;
     long enqueue;
     TextView defaults, faq;
     ImageView starIcon;
@@ -82,7 +94,7 @@ public class OpdsFragment2 extends UIFragment<Entry> {
             return Arrays.asList(new Entry(test, test));
         }
 
-        String[] list = AppState.get().myOPDS.split(";");
+        String[] list = AppState.get().myOPDSLinks.split(";");
         List<Entry> res = new ArrayList<Entry>();
         boolean hasStars = false;
         for (String line : list) {
@@ -121,11 +133,14 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
         titleView = (TextView) view.findViewById(R.id.titleView);
         onPlus = (ImageView) view.findViewById(R.id.onPlus);
+        onProxy = (ImageView) view.findViewById(R.id.onProxy);
         starIcon = (ImageView) view.findViewById(R.id.starIcon);
-        onPlusView = view.findViewById(R.id.onPlusView);
         pathContainer = view.findViewById(R.id.pathContainer);
+        view1 = view.findViewById(R.id.view1);
+        view2 = view.findViewById(R.id.view2);
         progressBar = (ProgressBar) view.findViewById(R.id.progressBar);
         progressBar.setVisibility(View.GONE);
+        TintUtil.setDrawableTint(progressBar.getIndeterminateDrawable().getCurrent(), Color.WHITE);
 
         onPlus.setOnClickListener(new OnClickListener() {
 
@@ -149,11 +164,12 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
             @Override
             public void onClick(View v) {
-                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults), new Runnable() {
+                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults_full), new Runnable() {
 
                     @Override
                     public void run() {
-                        AppState.get().myOPDS = AppState.OPDS_DEFAULT;
+                        AppState.get().myOPDSLinks = AppState.OPDS_DEFAULT;
+                        url = "/";
                         populate();
                     }
                 });
@@ -193,7 +209,8 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
                     @Override
                     public void run() {
-                        AppState.get().myOPDS = AppState.get().myOPDS.replace(result.appState, "");
+                        AppState.get().myOPDSLinks = AppState.get().myOPDSLinks.replace(result.appState, "");
+                        url = "/";
                         populate();
                     }
                 });
@@ -221,7 +238,7 @@ public class OpdsFragment2 extends UIFragment<Entry> {
                         public void run() {
                             populate();
                         }
-                    }, result, true);
+                    }, result, SamlibOPDS.isSamlibUrl(result.homeUrl) ? false : true);
                 }
                 return false;
             }
@@ -238,26 +255,29 @@ public class OpdsFragment2 extends UIFragment<Entry> {
                 }
                 entry.setAppState(url, title, url2, "assets://opds/star_1.png");
 
-                if (!AppState.get().myOPDS.contains(url)) {
+                if (!AppState.get().myOPDSLinks.contains(url)) {
 
                     AddCatalogDialog.showDialog(getActivity(), new Runnable() {
 
                         @Override
                         public void run() {
                             starIcon.setImageResource(R.drawable.star_1);
-                            TintUtil.setTintImage(starIcon, Color.WHITE);
+                            TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
                         }
                     }, entry, false);
                 } else {
-                    AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.do_you_want_to_delete_), new Runnable() {
-
-                        @Override
-                        public void run() {
-                            AppState.get().myOPDS = AppState.get().myOPDS.replace(entry.appState, "");
-                            starIcon.setImageResource(R.drawable.star_2);
-                            TintUtil.setTintImage(starIcon, Color.WHITE);
-                        }
-                    });
+                    AppState.get().myOPDSLinks = AppState.get().myOPDSLinks.replace(entry.appState, "");
+                    starIcon.setImageResource(R.drawable.star_2);
+                    TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
+                    // AlertDialogs.showOkDialog(getActivity(),
+                    // getActivity().getString(R.string.do_you_want_to_delete_), new Runnable() {
+                    //
+                    // @Override
+                    // public void run() {
+                    //
+                    // // url = "/";
+                    // }
+                    // });
                 }
 
             }
@@ -287,17 +307,155 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
             @Override
             public boolean onLongClick(View v) {
-                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults), new Runnable() {
+                AlertDialogs.showOkDialog(getActivity(), getActivity().getString(R.string.restore_defaults_full), new Runnable() {
 
                     @Override
                     public void run() {
-                        AppState.get().myOPDS = AppState.OPDS_DEFAULT;
+                        AppState.get().myOPDSLinks = AppState.OPDS_DEFAULT;
                         populate();
                     }
                 });
                 return true;
             }
         });
+
+        onProxy.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                View view = LayoutInflater.from(v.getContext()).inflate(R.layout.dialog_proxy_server, null, false);
+
+                final CheckBox proxyEnable = (CheckBox) view.findViewById(R.id.proxyEnable);
+                final CheckBox opdsLargeCovers = (CheckBox) view.findViewById(R.id.opdsLargeCovers);
+                final EditText proxyServer = (EditText) view.findViewById(R.id.proxyServer);
+                final EditText proxyPort = (EditText) view.findViewById(R.id.proxyPort);
+                final EditText proxyUser = (EditText) view.findViewById(R.id.proxyUser);
+                final EditText proxyPassword = (EditText) view.findViewById(R.id.proxyPassword);
+
+                final TextView proxyType = (TextView) view.findViewById(R.id.proxyType);
+
+                TintUtil.setBackgroundFillColor(view.findViewById(R.id.section1), TintUtil.color);
+                TintUtil.setBackgroundFillColor(view.findViewById(R.id.section2), TintUtil.color);
+
+                proxyEnable.setChecked(AppState.get().proxyEnable);
+                proxyServer.setText(AppState.get().proxyServer);
+                proxyPort.setText(AppState.get().proxyPort == 0 ? "" : "" + AppState.get().proxyPort);
+                proxyUser.setText(AppState.get().proxyUser);
+                proxyPassword.setText(AppState.get().proxyPassword);
+
+                proxyEnable.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if (isChecked) {
+                            if (TxtUtils.isEmpty(proxyServer.getText().toString())) {
+                                proxyServer.requestFocus();
+                                proxyEnable.setChecked(false);
+                                Toast.makeText(getContext(), R.string.incorrect_value, Toast.LENGTH_SHORT).show();
+                            } else if ("0".equals(proxyPort.getText().toString()) || TxtUtils.isEmpty(proxyPort.getText().toString())) {
+                                proxyPort.requestFocus();
+                                proxyEnable.setChecked(false);
+                                Toast.makeText(getContext(), R.string.incorrect_value, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                    }
+                });
+
+                TxtUtils.underline(proxyType, AppState.get().proxyType);
+
+                proxyType.setOnClickListener(new OnClickListener() {
+
+                    @Override
+                    public void onClick(View v) {
+                        PopupMenu menu = new PopupMenu(v.getContext(), v);
+                        menu.getMenu().add(AppState.PROXY_HTTP).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                            @Override
+                            public boolean onMenuItemClick(MenuItem item) {
+                                AppState.get().proxyType = AppState.PROXY_HTTP;
+                                TxtUtils.underline(proxyType, AppState.get().proxyType);
+                                return false;
+                            }
+                        });
+                        menu.getMenu().add(AppState.PROXY_SOCKS).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                            @Override
+                            public boolean onMenuItemClick(MenuItem item) {
+                                AppState.get().proxyType = AppState.PROXY_SOCKS;
+                                TxtUtils.underline(proxyType, AppState.get().proxyType);
+                                return false;
+                            }
+                        });
+                        menu.show();
+                    }
+                });
+
+                builder.setPositiveButton(R.string.apply, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        AppState.get().proxyEnable = proxyEnable.isChecked();
+                        AppState.get().proxyServer = proxyServer.getText().toString();
+
+                        try {
+                            AppState.get().proxyPort = Integer.parseInt(proxyPort.getText().toString());
+                        } catch (Exception e) {
+                            AppState.get().proxyPort = 0;
+                        }
+
+                        AppState.get().proxyUser = proxyUser.getText().toString().trim();
+                        AppState.get().proxyPassword = proxyPassword.getText().toString().trim();
+
+                        OPDS.buildProxy();
+
+                        AppState.get().save(getActivity());
+                        Keyboards.close(proxyServer);
+
+                    }
+                });
+
+                builder.setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                });
+
+                opdsLargeCovers.setChecked(AppState.get().opdsLargeCovers);
+                opdsLargeCovers.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        AppState.get().opdsLargeCovers = isChecked;
+                    }
+                });
+
+                final TextView downlodsPath = (TextView) view.findViewById(R.id.downlodsPath);
+                TxtUtils.underline(downlodsPath, TxtUtils.lastTwoPath(AppState.get().downlodsPath));
+                downlodsPath.setOnClickListener(new View.OnClickListener() {
+
+                    @Override
+                    public void onClick(final View v) {
+                        ChooserDialogFragment.chooseFolder(getActivity(), AppState.get().downlodsPath).setOnSelectListener(new ResultResponse2<String, Dialog>() {
+                            @Override
+                            public boolean onResultRecive(String nPath, Dialog dialog) {
+                                AppState.get().downlodsPath = nPath;
+                                TxtUtils.underline(downlodsPath, TxtUtils.lastTwoPath(AppState.get().downlodsPath));
+                                dialog.dismiss();
+                                return false;
+                            }
+                        });
+                    }
+                });
+
+                builder.setView(view);
+                builder.show();
+
+            }
+        });
+        OPDS.buildProxy();
 
         populate();
         onTintChanged();
@@ -363,11 +521,12 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
                 @Override
                 public void run() {
-                    if (!CacheZipUtils.LIRBI_DOWNLOAD_DIR.exists()) {
-                        CacheZipUtils.LIRBI_DOWNLOAD_DIR.mkdirs();
+                    File LIRBI_DOWNLOAD_DIR = new File(AppState.get().downlodsPath);
+                    if (!LIRBI_DOWNLOAD_DIR.exists()) {
+                        LIRBI_DOWNLOAD_DIR.mkdirs();
                     }
 
-                    final File file = new File(CacheZipUtils.LIRBI_DOWNLOAD_DIR, link.getDownloadName());
+                    final File file = new File(LIRBI_DOWNLOAD_DIR, link.getDownloadName());
                     file.delete();
 
                     new AsyncTask() {
@@ -404,8 +563,9 @@ public class OpdsFragment2 extends UIFragment<Entry> {
                         @Override
                         protected void onPostExecute(Object result) {
                             progressBar.setVisibility(View.GONE);
-                            if ((Boolean) result == false) {
+                            if ((Boolean) result == false || file.length() == 0) {
                                 Toast.makeText(getContext(), R.string.loading_error, Toast.LENGTH_LONG).show();
+                                // Urls.openWevView(getActivity(), link.href, null);
                             } else {
                                 link.filePath = file.getPath();
                             }
@@ -421,16 +581,14 @@ public class OpdsFragment2 extends UIFragment<Entry> {
     }
 
     public void clearEmpty() {
-        if (CacheZipUtils.LIRBI_DOWNLOAD_DIR == null) {
-            return;
+        File LIRBI_DOWNLOAD_DIR = new File(AppState.get().downlodsPath);
+
+        if (!LIRBI_DOWNLOAD_DIR.exists()) {
+            LIRBI_DOWNLOAD_DIR.mkdirs();
         }
 
-        if (!CacheZipUtils.LIRBI_DOWNLOAD_DIR.exists()) {
-            CacheZipUtils.LIRBI_DOWNLOAD_DIR.mkdirs();
-        }
-
-        for (String file : CacheZipUtils.LIRBI_DOWNLOAD_DIR.list()) {
-            File f = new File(CacheZipUtils.LIRBI_DOWNLOAD_DIR, file);
+        for (String file : LIRBI_DOWNLOAD_DIR.list()) {
+            File f = new File(LIRBI_DOWNLOAD_DIR, file);
             if (f.length() == 0) {
                 LOG.d("Delete file", f.getPath());
                 f.delete();
@@ -442,26 +600,29 @@ public class OpdsFragment2 extends UIFragment<Entry> {
 
     boolean isNeedLoginPassword = false;
 
+    public List<Entry> allCatalogs = new ArrayList<Entry>();
+
     @Override
     public List<Entry> prepareDataInBackground() {
         try {
             LOG.d("OPDS URL", url);
             if ("/".equals(url)) {
                 title = getString(R.string.catalogs);
-                return getAllCatalogs();
+                return allCatalogs = getAllCatalogs();
             }
 
             if (SamlibOPDS.isSamlibUrl(url)) {
                 Pair<List<Entry>, String> pair = SamlibOPDS.getSamlibResult(url);
                 List<Entry> samlibResult = pair.first;
-                title = pair.second;
+                title = pair.second.replace(SamlibOPDS.ROOT_FAVORITES, getString(R.string.favorites)).replace(SamlibOPDS.ROOT_AWARDS, getString(R.string.awards));
                 return samlibResult;
             }
 
             Feed feed = OPDS.getFeed(url);
-            if (isNeedLoginPassword = feed.isNeedLoginPassword) {
+            if (feed == null) {
                 return Collections.emptyList();
             }
+            isNeedLoginPassword = feed.isNeedLoginPassword;
 
             LOG.d("Load: >>>", feed.title, url);
 
@@ -495,7 +656,7 @@ public class OpdsFragment2 extends UIFragment<Entry> {
         for (Link l : links) {
             Hrefs.fixHref(l, homeUrl);
             l.parentTitle = parentTitle;
-            File book = new File(CacheZipUtils.LIRBI_DOWNLOAD_DIR, l.getDownloadName());
+            File book = new File(AppState.get().downlodsPath, l.getDownloadName());
             if (book.isFile()) {
                 l.filePath = book.getPath();
             }
@@ -517,8 +678,17 @@ public class OpdsFragment2 extends UIFragment<Entry> {
         }
 
         if (entries == null || entries.isEmpty()) {
-            Urls.openWevView(getActivity(), url);
-            popStack();
+            if ("/".equals(url)) {
+                return;
+            }
+            Urls.openWevView(getActivity(), url, new Runnable() {
+
+                @Override
+                public void run() {
+                    url = popStack();
+                }
+            });
+            url = popStack();
             return;
         }
 
@@ -527,21 +697,29 @@ public class OpdsFragment2 extends UIFragment<Entry> {
         recyclerView.setAdapter(searchAdapter);
 
         if (title != null) {
-            titleView.setText("" + title);
+            titleView.setText("" + title.replaceAll("[\n\r\t ]+", " ").trim());
         }
         int isHomeVisible = url == "/" ? View.VISIBLE : View.GONE;
         onPlus.setVisibility(isHomeVisible);
-        onPlusView.setVisibility(isHomeVisible);
         defaults.setVisibility(isHomeVisible);
         faq.setVisibility(isHomeVisible);
-        starIcon.setVisibility(url == "/" ? View.GONE : View.VISIBLE);
+        onProxy.setVisibility(isHomeVisible);
+        view1.setVisibility(isHomeVisible);
 
-        if (AppState.get().myOPDS.contains(url)) {
+        starIcon.setVisibility(url == "/" ? View.GONE : View.VISIBLE);
+        for (Entry cat : allCatalogs) {
+            if (url.equals(cat.homeUrl)) {
+                starIcon.setVisibility(View.GONE);
+                break;
+            }
+        }
+
+        if (AppState.get().myOPDSLinks.contains(url)) {
             starIcon.setImageResource(R.drawable.star_1);
         } else {
             starIcon.setImageResource(R.drawable.star_2);
         }
-        TintUtil.setTintImage(starIcon, Color.WHITE);
+        TintUtil.setTintImageWithAlpha(starIcon, Color.WHITE);
     }
 
     public void onGridList() {
@@ -568,7 +746,7 @@ public class OpdsFragment2 extends UIFragment<Entry> {
     public void notifyFragment() {
         if (searchAdapter != null) {
             searchAdapter.notifyDataSetChanged();
-            populate();
+            // populate();
         }
     }
 

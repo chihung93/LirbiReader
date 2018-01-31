@@ -23,6 +23,7 @@ import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.UITab;
 import com.foobnix.ui2.adapter.FileMetaAdapter;
+import com.foobnix.ui2.fragment.SearchFragment2;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -39,8 +40,8 @@ public class AppDB {
         PATH(FileMetaDao.Properties.Path, -1), //
         SERIES(FileMetaDao.Properties.Sequence, AppState.MODE_SERIES), //
         GENRE(FileMetaDao.Properties.Genre, AppState.MODE_GENRE), //
-        AUTHOR(FileMetaDao.Properties.Author, AppState.MODE_AUTHORS), //
-        ANNOT(FileMetaDao.Properties.Annotation, -1); //
+        AUTHOR(FileMetaDao.Properties.Author, AppState.MODE_AUTHORS);
+        // ANNOT(FileMetaDao.Properties.Annotation, -1); //
         // REGEX(FileMetaDao.Properties.Path, -1);//
         //
         private final Property property;
@@ -134,6 +135,10 @@ public class AppDB {
     private FileMetaDao fileMetaDao;
     private DaoSession daoSession;
 
+    public FileMetaDao getDao() {
+        return fileMetaDao;
+    }
+
     public void open(Context c) {
         DatabaseUpgradeHelper helper = new DatabaseUpgradeHelper(c, DB_NAME);
 
@@ -200,8 +205,16 @@ public class AppDB {
         for (FileMeta meta : list) {
             BookSettings bs = SettingsManager.getTempBookSettings(meta.getPath());
             try {
-                meta.setIsRecentProgress((float) (bs.currentPage.viewIndex + 1) / bs.getPages());
+                float isRecentProgress = (float) (bs.currentPage.viewIndex + 1) / bs.getPages();
+                if (isRecentProgress > 1) {
+                    isRecentProgress = 1;
+                }
+                if (isRecentProgress < 0) {
+                    isRecentProgress = 0;
+                }
+                meta.setIsRecentProgress(isRecentProgress);
             } catch (Exception e) {
+                LOG.d(e);
                 meta.setIsRecentProgress(1f);
             }
         }
@@ -270,6 +283,10 @@ public class AppDB {
         } catch (Exception e) {
             return Collections.emptyList();
         }
+    }
+
+    public FileMeta load(String path) {
+        return fileMetaDao.load(path);
     }
 
     public FileMeta getOrCreate(String path) {
@@ -392,9 +409,16 @@ public class AppDB {
                     break;
                 }
             }
+            LOG.d("searchBy", str);
+            if (TxtUtils.isNotEmpty(str) && str.startsWith(SearchFragment2.EMPTY_ID)) {
+                where = where.where(searchIn.getProperty().like(""));
+            } else
 
             if (searchIn == SEARCH_IN.SERIES && !str.contains("*")) {
                 where = where.where(searchIn.getProperty().eq(str));
+                // sort by index by deafult
+                // where = where.where(FileMetaDao.Properties.IsSearchBook.eq(1));
+                // return where.orderAsc(SORT_BY.SERIES_INDEX.getProperty()).list();
             } else {
                 if (TxtUtils.isNotEmpty(str)) {
                     str = str.replace(" ", "%").replace("*", "%");

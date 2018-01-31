@@ -2,7 +2,7 @@ package org.ebookdroid.core;
 
 import java.util.Queue;
 
-import org.ebookdroid.LirbiApp;
+import org.ebookdroid.LibreraApp;
 import org.ebookdroid.core.codec.PageLink;
 import org.ebookdroid.ui.viewer.IActivityController;
 import org.emdev.utils.LengthUtils;
@@ -11,7 +11,6 @@ import com.foobnix.android.utils.Dips;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
-import com.foobnix.sys.TempHolder;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -67,7 +66,7 @@ public class EventDraw implements IEvent {
     public ViewState process() {
         try {
 
-            if (AppState.get().isOLED && MagicHelper.getBgColor() == Color.BLACK) {
+            if (AppState.get().isOLED && !AppState.get().isDayNotInvert /* && MagicHelper.getBgColor() == Color.BLACK */) {
                 viewState.paint.backgroundFillPaint.setColor(Color.BLACK);
             } else {
                 viewState.paint.backgroundFillPaint.setColor(MagicHelper.ligtherColor(MagicHelper.getBgColor()));
@@ -115,8 +114,8 @@ public class EventDraw implements IEvent {
             p.setAlpha(255 - MagicHelper.getTransparencyInt());
             canvas.drawBitmap(MagicHelper.getBackgroundImage(), m, p);
         }
-        if (AppState.get().isOLED && !AppState.get().isInvert && !TempHolder.get().isTextFormat) {
-            canvas.drawRect(fixedPageBounds.left, fixedPageBounds.top - dp1, fixedPageBounds.right, fixedPageBounds.bottom + dp1, rect);
+        if (AppState.get().isOLED && !AppState.get().isDayNotInvert/* && !TempHolder.get().isTextFormat */) {
+            canvas.drawRect(fixedPageBounds.left - dp1, fixedPageBounds.top - dp1, fixedPageBounds.right + dp1, fixedPageBounds.bottom + dp1, rect);
         }
 
         // TODO Draw there
@@ -182,7 +181,7 @@ public class EventDraw implements IEvent {
         textPaint.setTextSize(Dips.spToPx(16));
         textPaint.setColor(MagicHelper.getTextColor());
 
-        final String text = LirbiApp.context.getString(R.string.text_page) + " " + (page.index.viewIndex + 1);
+        final String text = LibreraApp.context.getString(R.string.text_page) + " " + (page.index.viewIndex + 1);
         canvas.drawText(text, fixedPageBounds.centerX(), fixedPageBounds.centerY(), textPaint);
 
     }
@@ -216,7 +215,7 @@ public class EventDraw implements IEvent {
 
     private void drawSelectedText(final Page page) {
         final Paint p = new Paint();
-        p.setColor(AppState.get().isInvert ? Color.BLUE : Color.YELLOW);
+        p.setColor(AppState.get().isDayNotInvert ? Color.BLUE : Color.YELLOW);
         p.setAlpha(60);
 
         if (page.selectionAnnotion != null) {

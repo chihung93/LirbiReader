@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.pdf.reader.R;
 
 import android.app.SearchManager;
 import android.content.ComponentName;
@@ -17,7 +18,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.widget.Toast;
-import com.foobnix.pdf.reader.R;
 
 public class DictsHelper {
 

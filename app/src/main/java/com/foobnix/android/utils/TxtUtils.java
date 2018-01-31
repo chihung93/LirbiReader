@@ -1,17 +1,21 @@
 package com.foobnix.android.utils;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.Character.UnicodeBlock;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.foobnix.dao2.FileMeta;
-import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.sys.TempHolder;
 
 import android.annotation.TargetApi;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.support.v4.util.Pair;
 import android.text.Html;
@@ -19,6 +23,78 @@ import android.text.Spanned;
 import android.widget.TextView;
 
 public class TxtUtils {
+
+    public static String LONG_DASH = "–";
+    public static String SMALL_DASH = " - ";
+
+    public static String lastTwoPath(String txt) {
+        int fist = txt.lastIndexOf("/");
+        if (fist >= 0) {
+            int second = txt.lastIndexOf("/", fist - 1);
+            if (second >= 0) {
+                return "[..." + txt.substring(second) + "]";
+            } else {
+                return "[..." + txt.substring(fist) + "]";
+            }
+        }
+        return "[" + txt + "]";
+    }
+
+    public static String encode1251(String string) {
+        if (Charset.forName("8859_1").newEncoder().canEncode(string)) {
+            return encode(string, "8859_1", "Windows-1251");
+        } else {
+            return string;
+        }
+    }
+
+    public static String toLowerCase(String str) {
+        if (str == null) {
+            return str;
+        }
+        return str.toLowerCase(Locale.US);
+
+    }
+
+    public static String encode(String string, String from, String to) {
+        try {
+            return new String(string.getBytes(from), to);
+        } catch (UnsupportedEncodingException e) {
+            return string;
+        }
+    }
+
+    public static String deltaPage(int current) {
+        return deltaPage(current, 0);
+    }
+
+    public static String deltaPage(int current, int max) {
+        if (max != 0) {
+            if (AppState.get().readingProgress == AppState.READING_PROGRESS_PERCENT_NUMBERS) {
+                float f = (float) current * 100 / max;
+                return String.format("%.1f", f) + "%";
+            }
+            if (AppState.get().readingProgress == AppState.READING_PROGRESS_PERCENT) {
+                float f = (float) current * 100 / max;
+                return String.format("%.1f", f) + "%";
+            }
+        }
+
+        if (TempHolder.get().pageDelta == 0) {
+            return "" + current;
+        }
+        return "[" + (current + TempHolder.get().pageDelta) + "]";
+    }
+
+    public static String deltaPageMax(int current) {
+        if (AppState.get().readingProgress == AppState.READING_PROGRESS_PERCENT) {
+            return "100%";
+        }
+        if (TempHolder.get().pageDelta == 0) {
+            return "" + current;
+        }
+        return "[" + (current + TempHolder.get().pageDelta) + "]";
+    }
 
     public static void addFilteredGenreSeries(String item, List<String> result, boolean simpleAdd) {
         if (TxtUtils.isEmpty(item)) {
@@ -78,21 +154,29 @@ public class TxtUtils {
 
     }
 
+    public static String replaceEndLine(String pageHTML) {
+        pageHTML = pageHTML.replace("-<end-line>", "");
+        pageHTML = pageHTML.replace("- <end-line>", "");
+        pageHTML = pageHTML.replace("<end-line>", " ");
+        return pageHTML;
+    }
+
     public static String replaceHTMLforTTS(String pageHTML) {
         if (pageHTML == null) {
             return "";
         }
-        pageHTML = pageHTML.replace("<b>", " ").replace("</b>", " ").replace("<i>", " ").replace("</i>", " ");
+        LOG.d("pageHTML [before]", pageHTML);
+        pageHTML = pageHTML.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("<tt>", "").replace("</tt>", "");
         pageHTML = pageHTML.replace("<br/>", " ");
-        pageHTML = pageHTML.replace("<p>", " ").replace("</p>", ". ");
-        pageHTML = pageHTML.replace("&nbsp;", " ");
-        pageHTML = pageHTML.replaceAll("<end/>$", " ").replace("<end/>", ".");
+        pageHTML = replaceEndLine(pageHTML);
+        pageHTML = pageHTML.replace("<p>", "").replace("</p>", " ");
+        pageHTML = pageHTML.replace("&nbsp;", " ").replace("&lt;", " ").replace("&gt;", "").replace("&amp;", " ").replace("&quot;", " ");
         pageHTML = pageHTML.replace("'", "");
         pageHTML = pageHTML.replace("*", "");
-        pageHTML = pageHTML.replace("'", "");
         pageHTML = pageHTML.replace("  ", " ").replace("  ", " ");
         pageHTML = pageHTML.replace(".", ". ").replace(" .", ".").replace(" .", ".");
         pageHTML = pageHTML.replaceAll("(?u)(\\w+)(-\\s)", "$1");
+        LOG.d("pageHTML [after]", pageHTML);
         return pageHTML;
     }
 
@@ -138,12 +222,8 @@ public class TxtUtils {
     }
 
     public static String getFileMetaBookName(FileMeta fileMeta) {
-        if (!ExtUtils.isTextFomat(fileMeta.getPath())) {
-            return ExtUtils.getFileName(fileMeta.getPath());
-        }
-
         if (TxtUtils.isNotEmpty(fileMeta.getAuthor())) {
-            return fileMeta.getAuthor() + " - " + fileMeta.getTitle();
+            return fileMeta.getAuthor() + " " + LONG_DASH + " " + fileMeta.getTitle();
         } else {
             return fileMeta.getTitle();
         }
@@ -250,7 +330,7 @@ public class TxtUtils {
 
     }
 
-    static List<String> dividers = Arrays.asList(" - ", " _ ", "_-_");
+    static List<String> dividers = Arrays.asList(" - ", " _ ", "_-_", "+-+");
 
     public static Pair<String, String> getTitleAuthorByPath(String name) {
         LOG.d("getTitleAuthorByPath", name);
@@ -317,6 +397,11 @@ public class TxtUtils {
 
     public static TextView underlineTextView(TextView textView) {
         String text = textView.getText().toString();
+        textView.setText(underline(text));
+        return textView;
+    }
+
+    public static TextView underline(TextView textView, String text) {
         textView.setText(underline(text));
         return textView;
     }
@@ -528,7 +613,11 @@ public class TxtUtils {
         }
         StringBuilder sb = new StringBuilder();
         for (Object it : items) {
-            sb.append(it);
+            if (it == null) {
+                sb.append("@null");
+            } else {
+                sb.append(it);
+            }
             sb.append(delim);
         }
         String string = sb.toString();
@@ -583,6 +672,27 @@ public class TxtUtils {
 
     public static boolean isListEmpty(List<?> objects) {
         return objects == null || objects.size() <= 1;
+    }
+
+    public static void bold(TextView text) {
+        text.setTypeface(Typeface.DEFAULT_BOLD, Typeface.BOLD);
+
+    }
+
+    public static String ellipsize(String title, int size) {
+        if (TxtUtils.isEmpty(title)) {
+            return "";
+        }
+        if (title.length() <= size) {
+            return title;
+        }
+
+        String substring = title.substring(0, size);
+        if (substring.endsWith(" ")) {
+            return substring;
+        }
+        return substring + " ...";
+
     }
 
 }

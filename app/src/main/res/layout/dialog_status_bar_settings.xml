@@ -10,20 +10,11 @@
         android:orientation="vertical"
         android:padding="2dip" >
 
-        <TextView
-            android:id="@+id/onBack"
-            style="@style/textLink"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0"
-            android:text="@string/preferences" />
-
         <CheckBox
             android:id="@+id/isShowSatusBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:layout_weight="1"
             android:text="@string/show_status_bar" />
 
         <CheckBox
@@ -31,7 +22,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:layout_weight="1"
             android:text="@string/show_progress_of_reading" />
 
         <CheckBox
@@ -39,13 +29,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
-            android:layout_weight="1"
             android:text="@string/display_chapters_on_the_progress_line" />
+
+        <CheckBox
+            android:id="@+id/isRewindEnable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dip"
+            android:text="@string/enable_rewind_of_pages_using_the_read_progress_line" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dip"
+            android:layout_marginTop="10dip"
             android:orientation="horizontal" >
 
             <TextView
@@ -71,6 +68,28 @@
                 android:padding="8dip"
                 android:src="@drawable/glyphicons_207_ok"
                 android:tint="@color/tint_gray" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dip" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dip"
+                android:singleLine="true"
+                android:text="@string/current_page" />
+
+            <TextView
+                android:id="@+id/readingProgress"
+                style="@style/textLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dip"
+                android:layout_weight="1"
+                android:text="Numbers" />
         </LinearLayout>
 
         <com.foobnix.pdf.info.view.CustomSeek

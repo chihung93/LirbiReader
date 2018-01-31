@@ -1,10 +1,10 @@
 package org.ebookdroid.core.crop;
 
+import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
 
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -13,34 +13,43 @@ public class PageCropper {
     public static final int BMP_SIZE = 800;
     private static final Rect RECT = new Rect(0, 0, BMP_SIZE, BMP_SIZE);
 
-    public static RectF getCropBounds(final Bitmap bitmap, final Rect bitmapBounds, final RectF pageSliceBounds) {
+    public static RectF getCropBounds(Bitmap bitmap1, final Rect bitmapBounds, final RectF pageSliceBounds) {
 
-        Bitmap source = Bitmap.createBitmap(BMP_SIZE, BMP_SIZE, Bitmap.Config.RGB_565);
+        // Bitmap source = Bitmap.createBitmap(BMP_SIZE, BMP_SIZE,
+        // Bitmap.Config.RGB_565);
         // Bitmap source = Bitmap.createBitmap(bitmapRef.getBitmap());
 
-        final Canvas c = new Canvas(source);
-        c.drawBitmap(bitmap, bitmapBounds, RECT, null);
+        // final Canvas c = new Canvas(source);
+        // c.drawBitmap(bitmap1, bitmapBounds, RECT, null);
 
-        int firstColor = source.getPixel(0, 0);
-        int baseColor = !MagicHelper.isColorDarkSimple(firstColor) ? firstColor : Color.WHITE;
-        LOG.d("First color is ligth", !MagicHelper.isColorDarkSimple(firstColor), firstColor);
+        int f = bitmap1.getPixel(0, 0);
+        int fR = Color.red(f);
+        int fG = Color.green(f);
+        int fB = Color.blue(f);
 
-        int width = source.getWidth();
-        int height = source.getHeight();
+        int width = bitmap1.getWidth();
+        int height = bitmap1.getHeight();
 
         int topY = height;
         int topX = width;
         int bottomY = 0;
         int bottomX = 0;
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int pixel = source.getPixel(x, y);
-                if (baseColor == pixel) {
+        LOG.d("firstColor", MagicHelper.colorToString(f));
+        int dx = Dips.dpToPx(4);
+
+        for (int y = 0; y < height; y += dx) {
+            for (int x = 0; x < width; x += dx) {
+                int p = bitmap1.getPixel(x, y);
+                if (p == Color.WHITE || p == Color.BLACK || p == f) {
                     continue;
                 }
 
-                if (pixel == Color.BLACK || MagicHelper.isColorDarkSimple(pixel)) {
+                int pR = Color.red(p);
+                int pG = Color.green(p);
+                int pB = Color.blue(p);
+
+                if (Math.abs(fR - pR) > 10 && Math.abs(fG - pG) > 10 && Math.abs(fB - pB) > 10) {
                     if (x < topX)
                         topX = x;
                     if (y < topY)
@@ -49,6 +58,8 @@ public class PageCropper {
                         bottomX = x;
                     if (y > bottomY)
                         bottomY = y;
+                } else {
+
                 }
             }
         }

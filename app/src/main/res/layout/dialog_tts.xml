@@ -86,7 +86,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0"
-            android:text="@string/restore_defaults" />
+            android:text="@string/restore_defaults_short" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -135,26 +135,6 @@
             android:layout_height="wrap_content"
             android:text="@string/ongoing_notification" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical" >
-
-            <Button
-                android:id="@+id/ttsSkeakToFile"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/speak_into_file_wav_" />
-
-            <TextView
-                android:id="@+id/ttsSpeakPath"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="10dip"
-                android:gravity="center_vertical"
-                android:lines="2"
-                android:text="path" />
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -183,6 +163,12 @@
                 android:minEms="2"
                 android:text="@string/start" />
         </LinearLayout>
+        
+        <Button
+            android:id="@+id/ttsSkeakToFile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/speak_into_file_wav_" />
     </LinearLayout>
 
 </ScrollView>

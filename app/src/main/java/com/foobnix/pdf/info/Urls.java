@@ -6,10 +6,12 @@ import java.util.Locale;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.opds.OPDS;
+import com.foobnix.pdf.reader.R;
 
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnDismissListener;
 import android.content.Intent;
 import android.net.Uri;
 import android.support.v4.text.TextUtilsCompat;
@@ -19,7 +21,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import com.foobnix.pdf.reader.R;
 
 public class Urls {
 
@@ -42,7 +43,7 @@ public class Urls {
         a.startActivity(browserIntent);
     }
 
-    public static void openWevView(final Context a, String url) {
+    public static void openWevView(final Context a, String url, final Runnable onClose) {
         LOG.d(">>> open WevView", url);
 
         AlertDialog.Builder alert = new AlertDialog.Builder(a);
@@ -66,8 +67,6 @@ public class Urls {
 
         });
 
-
-
         wrapper.setOrientation(LinearLayout.VERTICAL);
         wrapper.addView(wv, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
         wrapper.addView(keyboardHack, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -76,10 +75,22 @@ public class Urls {
             @Override
             public void onClick(DialogInterface dialog, int id) {
                 dialog.dismiss();
+                if (onClose != null) {
+                    onClose.run();
+                }
+            }
+        });
+        AlertDialog create = alert.create();
+        create.setOnDismissListener(new OnDismissListener() {
+
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                if (onClose != null) {
+                    onClose.run();
+                }
             }
         });
         alert.show();
-
 
     }
 

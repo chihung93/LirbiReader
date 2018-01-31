@@ -6,6 +6,7 @@ package com.foobnix.pdf.info.wrapper;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import org.ebookdroid.common.settings.SettingsManager;
 import org.ebookdroid.common.settings.books.BookSettings;
@@ -13,26 +14,34 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import com.foobnix.android.utils.Apps;
 import com.foobnix.android.utils.Dips;
+import com.foobnix.android.utils.IntegerResponse;
 import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
-import com.foobnix.pdf.info.ADS;
-import com.foobnix.pdf.info.AppsConfig;
+import com.foobnix.android.utils.Vibro;
+import com.foobnix.android.utils.Views;
 import com.foobnix.pdf.info.DictsHelper;
+import com.foobnix.pdf.info.ExtUtils;
+import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.UiSystemUtils;
 import com.foobnix.pdf.info.model.BookCSS;
 import com.foobnix.pdf.info.model.OutlineLinkWrapper;
-import com.foobnix.pdf.info.view.BrigtnessDraw;
+import com.foobnix.pdf.info.view.BrightnessHelper;
+import com.foobnix.pdf.info.view.CustomSeek;
+import com.foobnix.pdf.info.view.Dialogs;
 import com.foobnix.pdf.info.view.DragingDialogs;
 import com.foobnix.pdf.info.view.DragingPopup;
 import com.foobnix.pdf.info.view.DrawView;
 import com.foobnix.pdf.info.view.HorizontallSeekTouchEventListener;
+import com.foobnix.pdf.info.view.MyPopupMenu;
 import com.foobnix.pdf.info.view.ProgressDraw;
+import com.foobnix.pdf.info.view.UnderlineImageView;
 import com.foobnix.pdf.info.widget.ShareDialog;
-import com.foobnix.pdf.reader.R;
-import com.foobnix.pdf.search.activity.DocumentControllerHorizontalView;
+import com.foobnix.pdf.search.activity.HorizontalModeController;
+import com.foobnix.pdf.search.activity.msg.MessegeBrightness;
 import com.foobnix.pdf.search.view.CloseAppDialog;
 import com.foobnix.sys.TempHolder;
 import com.foobnix.tts.MessagePageNumber;
@@ -40,14 +49,13 @@ import com.foobnix.tts.TTSEngine;
 import com.foobnix.tts.TtsStatus;
 import com.foobnix.ui2.AppDB;
 import com.foobnix.ui2.MainTabs2;
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.InterstitialAd;
+import com.nostra13.universalimageloader.core.ImageLoader;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.DialogInterface.OnClickListener;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
@@ -58,11 +66,11 @@ import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -71,55 +79,35 @@ import android.widget.TextView;
  * 
  */
 public class DocumentWrapperUI {
-
     private static final int TRANSPARENT_UI = 240;
-    View menuLayout, moveLeft, moveRight, pages, lineNavgination;
-    ImageView imageMenuArrow;
-    View adFrame;
-    SeekBar seekBar;
-    private final DocumentController controller;
-    private TextView currentPageIndex;
-    private TextView currentSeek;
-    private TextView maxSeek;
-    private TextView currentTime;
-    private TextView bookName;
-    private Activity a;
-    private String bookTitle;
-    private DocumentGestureListener documentListener;
-    private ImageView onDocDontext;
-    private ImageView toolBarButton;
-    private View titleBar;
-    private TextView nextTypeBootom;
-    private DocumentGuestureDetector documentGestureDetector;
-    private GestureDetector gestureDetector;
-    private ImageView linkHistory;
-    private ImageView lockUnlock;
-    private ImageView lockUnlockTop, textToSpeachTop, clockIcon, batteryIcon;
-    private ImageView showSearch;
+
+    final DocumentController dc;
+    Activity a;
+    String bookTitle;
+
+    DocumentGestureListener documentListener;
+    DocumentGuestureDetector documentGestureDetector;
+    GestureDetector gestureDetector;
+
+    TextView toastBrightnessText, currentPageIndex, currentSeek, maxSeek, currentTime, bookName, nextTypeBootom, batteryLevel, lirbiLogo, reverseKeysIndicator;
+    ImageView onDocDontext, toolBarButton, linkHistory, lockUnlock, lockUnlockTop, textToSpeachTop, clockIcon, batteryIcon;
+    ImageView showSearch, nextScreenType, autoScroll, textToSpeach, ttsActive, onModeChange, imageMenuArrow, editTop2, goToPage1, goToPage1Top;
+    View adFrame, titleBar, overlay, menuLayout, moveLeft, moveRight, bottomBar, onCloseBook, seekSpeedLayot, zoomPlus, zoomMinus;
+    View line1, line2, lineFirst, lineClose, closeTop;
+    SeekBar seekBar, speedSeekBar;
+    FrameLayout anchor;
+    DrawView drawView;
     ProgressDraw progressDraw;
-    private ImageView nextScreenType, crop, cut, autoScroll, textToSpeach, ttsActive;
-    private SeekBar speedSeekBar;
-    private View seekSpeedLayot, zoomPlus, zoomMinus;
-    private FrameLayout anchor;
-    private TextView batteryLevel;
+    UnderlineImageView crop, cut, onBC;
 
-    private ImageView editTop2;
-    private TextView lirbiLogo;
-    private DrawView drawView;
-    private View line1, line2, lineFirst, lineClose, closeTop;
-    private ImageView goToPage1, goToPage1Top;
-    private TextView reverseKeysIndicator;
-    private BrigtnessDraw brigtnessProgressView;
-
-    private final Handler handler = new Handler();
-
-    InterstitialAd mInterstitialAd;
+    final Handler handler = new Handler();
+    final Handler handlerTimer = new Handler();
 
     public DocumentWrapperUI(final DocumentController controller) {
-        AppState.getInstance().annotationDrawColor = "";
-        AppState.getInstance().editWith = AppState.EDIT_NONE;
+        AppState.get().annotationDrawColor = "";
+        AppState.get().editWith = AppState.EDIT_NONE;
 
-        this.controller = controller;
+        this.dc = controller;
         controller.setUi(this);
 
         documentListener = new DocumentGestureListener() {
@@ -152,20 +140,30 @@ public class DocumentWrapperUI {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onPageNumber(MessagePageNumber event) {
-        if (controller != null) {
-            controller.onGoToPage(event.getPage() + 1);
-            ttsActive.setVisibility(View.VISIBLE);
+        try {
+            if (dc != null) {
+                dc.onGoToPage(event.getPage() + 1);
+                ttsActive.setVisibility(View.VISIBLE);
+            }
+        } catch (Exception e) {
+            LOG.e(e);
         }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onTTSStatus(TtsStatus status) {
-        ttsActive.setVisibility(TTSEngine.get().isPlaying() ? View.VISIBLE : View.GONE);
+        try {
+            if (ttsActive != null) {
+                ttsActive.setVisibility(TTSEngine.get().isPlaying() ? View.VISIBLE : View.GONE);
+            }
+        } catch (Exception e) {
+            LOG.e(e);
+        }
 
     }
 
     public void onSingleTap() {
-        if (AppState.getInstance().isMusicianMode) {
+        if (AppState.get().isMusicianMode) {
             onAutoScrollClick();
         } else {
             doShowHideWrapperControlls();
@@ -184,8 +182,8 @@ public class DocumentWrapperUI {
 
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public void onLongPress(MotionEvent ev) {
-        if (controller.isTextFormat() && TxtUtils.isFooterNote(AppState.get().selectedText)) {
-            showFootNotes = DragingDialogs.showFootNotes(anchor, controller, new Runnable() {
+        if (dc.isTextFormat() && TxtUtils.isFooterNote(AppState.get().selectedText)) {
+            showFootNotes = DragingDialogs.showFootNotes(anchor, dc, new Runnable() {
 
                 @Override
                 public void run() {
@@ -196,13 +194,21 @@ public class DocumentWrapperUI {
             if (AppState.get().isRememberDictionary) {
                 DictsHelper.runIntent(anchor.getContext(), AppState.get().selectedText);
             } else {
-                DragingDialogs.selectTextMenu(anchor, controller, true);
+                DragingDialogs.selectTextMenu(anchor, dc, true, updateUIRunnable);
             }
         }
     }
 
+    Runnable updateUIRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            updateUI();
+        }
+    };
+
     public void showSelectTextMenu() {
-        DragingDialogs.selectTextMenu(anchor, controller, true);
+        DragingDialogs.selectTextMenu(anchor, dc, true, updateUIRunnable);
     }
 
     public boolean checkBack(final KeyEvent event) {
@@ -212,7 +218,7 @@ public class DocumentWrapperUI {
         }
 
         if (anchor == null) {
-            closeAndRunList(false);
+            closeAndRunList();
             return true;
         }
         if (AppState.get().isAutoScroll) {
@@ -223,20 +229,20 @@ public class DocumentWrapperUI {
 
         if (KeyEvent.KEYCODE_BACK == keyCode) {
             if (anchor.getChildCount() > 0 && anchor.getVisibility() == View.VISIBLE) {
-                controller.clearSelectedText();
+                dc.clearSelectedText();
                 anchor.setTag("backSpace");
                 anchor.removeAllViews();
                 anchor.setVisibility(View.GONE);
                 if (prefDialog != null) {
                     prefDialog.closeDialog();
                 }
-            } else if (!controller.getLinkHistory().isEmpty()) {
-                controller.onLinkHistory();
-            } else {
-                closeAndRunList(false);
+                return true;
+            } else if (!dc.getLinkHistory().isEmpty()) {
+                dc.onLinkHistory();
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     public boolean dispatchKeyEventUp(final KeyEvent event) {
@@ -261,16 +267,16 @@ public class DocumentWrapperUI {
         }
 
         if (keyCode >= KeyEvent.KEYCODE_1 && keyCode <= KeyEvent.KEYCODE_9) {
-            controller.onGoToPage(keyCode - KeyEvent.KEYCODE_1 + 1);
+            dc.onGoToPage(keyCode - KeyEvent.KEYCODE_1 + 1);
             return true;
         }
         if (keyCode == KeyEvent.KEYCODE_0) {
-            controller.toPageDialog();
+            dc.toPageDialog();
             return true;
         }
 
         if (KeyEvent.KEYCODE_F == keyCode) {
-            controller.alignDocument();
+            dc.alignDocument();
             return true;
         }
 
@@ -284,29 +290,33 @@ public class DocumentWrapperUI {
             return true;
         }
 
-        if (AppState.get().isUseVolumeKeys && AppState.getInstance().isAutoScroll && KeyEvent.KEYCODE_VOLUME_UP == keyCode) {
-            if (AppState.getInstance().autoScrollSpeed > 1) {
-                AppState.getInstance().autoScrollSpeed -= 1;
-                controller.onAutoScroll();
+        if (AppState.get().isScrollSpeedByVolumeKeys && AppState.get().isUseVolumeKeys && AppState.get().isAutoScroll) {
+            if (KeyEvent.KEYCODE_VOLUME_UP == keyCode) {
+                if (AppState.get().autoScrollSpeed > 1) {
+                    AppState.get().autoScrollSpeed -= 1;
+                    dc.onAutoScroll();
+                    updateUI();
+                }
+                return true;
+            }
+            if (KeyEvent.KEYCODE_VOLUME_DOWN == keyCode) {
+                if (AppState.get().autoScrollSpeed <= AppState.MAX_SPEED) {
+                    AppState.get().autoScrollSpeed += 1;
+                }
+                dc.onAutoScroll();
                 updateUI();
+                return true;
             }
-            return true;
-        }
-        if (AppState.get().isUseVolumeKeys && AppState.getInstance().isAutoScroll && KeyEvent.KEYCODE_VOLUME_DOWN == keyCode) {
-            if (AppState.getInstance().autoScrollSpeed <= AppState.MAX_SPEED) {
-                AppState.getInstance().autoScrollSpeed += 1;
-            }
-            controller.onAutoScroll();
-            updateUI();
-            return true;
         }
 
-        if (AppState.get().isUseVolumeKeys && AppState.getInstance().getNextKeys().contains(keyCode)) {
-            nextChose(false);
+        if (AppState.get().isUseVolumeKeys && AppState.get().getNextKeys().contains(keyCode))
+
+        {
+            nextChose(false, event.getRepeatCount());
             return true;
         }
-        if (AppState.get().isUseVolumeKeys && AppState.getInstance().getPrevKeys().contains(keyCode)) {
-            prevChose(false);
+        if (AppState.get().isUseVolumeKeys && AppState.get().getPrevKeys().contains(keyCode)) {
+            prevChose(false, event.getRepeatCount());
             return true;
         }
 
@@ -317,26 +327,26 @@ public class DocumentWrapperUI {
                 TTSEngine.get().playCurrent();
                 anchor.setTag("");
             }
-            DragingDialogs.textToSpeachDialog(anchor, controller);
+            DragingDialogs.textToSpeachDialog(anchor, dc);
             return true;
         }
 
         if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-            controller.onScrollDown();
+            dc.onScrollDown();
             return true;
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            controller.onScrollUp();
+            dc.onScrollUp();
             return true;
         }
 
         if (keyCode == 70) {
-            controller.onZoomInc();
+            dc.onZoomInc();
             return true;
         }
 
         if (keyCode == 69) {
-            controller.onZoomDec();
+            dc.onZoomDec();
             return true;
         }
 
@@ -344,78 +354,50 @@ public class DocumentWrapperUI {
 
     }
 
-    public void closeAndRunList(final boolean isLong) {
+    public void closeAndRunList() {
         EventBus.getDefault().unregister(this);
-        AppState.get().lastA = null;
+
+        AppState.get().lastClosedActivity = null;
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
         }
 
-        if (mInterstitialAd != null && mInterstitialAd.isLoaded()) {
-            mInterstitialAd.show();
-        } else {
-            if (titleBar != null) {
-                titleBar.removeCallbacks(null);
-            }
-            controller.onCloseActivity();
-
-            if (isLong && !MainTabs2.isInStack) {
-                MainTabs2.startActivity(a, UITab.getCurrentTabIndex(UITab.SearchFragment));
-            }
-        }
-    }
-
-    private void closeAndRunList1(final boolean isLong) {
-        if (!MainTabs2.isInStack) {
-            AlertDialog.Builder dialog = new AlertDialog.Builder(a);
-            CharSequence items[] = new CharSequence[] { "Return to PDF", "Return to app" };
-            dialog.setItems(items, new DialogInterface.OnClickListener() {
-
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    if (which == 0) {
-                        titleBar.removeCallbacks(null);
-                        controller.onCloseActivity();
-
-                        final Intent intent = new Intent(a, MainTabs2.class);
-                        a.startActivity(intent);
-                        a.overridePendingTransition(0, 0);
-                    }
-                    if (which == 1) {
-                        titleBar.removeCallbacks(null);
-                        controller.onCloseActivity();
-                    }
-
-                }
-            });
-            dialog.show();
-
-        } else {
-
+        if (titleBar != null) {
             titleBar.removeCallbacks(null);
-            controller.onCloseActivity();
         }
+        dc.onCloseActivityAdnShowInterstial();
+
     }
 
     public void updateSpeedLabel() {
-        final int max = controller.getPageCount();
-        final int current = controller.getCurentPage();
 
-        if (AppState.getInstance().isAutoScroll) {
-            currentPageIndex.setText(String.format("{%s} %s/%s", AppState.getInstance().autoScrollSpeed, current, max));
+        int maxValue = dc.getPageCount();
+        String current = TxtUtils.deltaPage(dc.getCurentPage(), maxValue);
+        String max = TxtUtils.deltaPageMax(maxValue);
+
+        if (AppState.get().readingProgress == AppState.READING_PROGRESS_PERCENT) {
+            if (AppState.get().isAutoScroll) {
+                currentPageIndex.setText(String.format("{%s} %s", AppState.get().autoScrollSpeed, current));
+            } else {
+                currentPageIndex.setText(String.format("%s", current));
+            }
         } else {
-            currentPageIndex.setText(String.format("%s/%s", current, max));
+
+            if (AppState.get().isAutoScroll) {
+                currentPageIndex.setText(String.format("{%s} %s/%s", AppState.get().autoScrollSpeed, current, max));
+            } else {
+                currentPageIndex.setText(String.format("%s/%s", current, max));
+            }
         }
-        currentPageIndex.setVisibility(max == 0 ? View.GONE : View.VISIBLE);
     }
 
     public void updateUI() {
-        final int max = controller.getPageCount();
-        final int current = controller.getCurentPage();
+        final int max = dc.getPageCount();
+        final int current = dc.getCurentPage();
 
         updateSpeedLabel();
-        currentSeek.setText(String.valueOf(current));
-        maxSeek.setText(String.valueOf(max));
+        currentSeek.setText(TxtUtils.deltaPage(current, max));
+        maxSeek.setText(TxtUtils.deltaPageMax(max));
 
         seekBar.setOnSeekBarChangeListener(null);
         seekBar.setMax(max - 1);
@@ -424,7 +406,7 @@ public class DocumentWrapperUI {
 
         speedSeekBar.setOnSeekBarChangeListener(null);
         speedSeekBar.setMax(AppState.MAX_SPEED);
-        speedSeekBar.setProgress(AppState.getInstance().autoScrollSpeed);
+        speedSeekBar.setProgress(AppState.get().autoScrollSpeed);
         speedSeekBar.setOnSeekBarChangeListener(onSpeed);
 
         // time
@@ -438,7 +420,7 @@ public class DocumentWrapperUI {
 
         showChapter();
 
-        showHide();
+        hideShow();
         initNextType();
         initToolBarPlusMinus();
 
@@ -450,35 +432,52 @@ public class DocumentWrapperUI {
             reverseKeysIndicator.setVisibility(View.GONE);
         }
 
-        moveLeft.setVisibility(Dips.screenWidth() < Dips.dpToPx(480) ? View.GONE : View.VISIBLE);
-        moveRight.setVisibility(Dips.screenWidth() < Dips.dpToPx(480) ? View.GONE : View.VISIBLE);
-        if (controller.isTextFormat()) {
+        moveLeft.setVisibility(Dips.isSmallScreen() ? View.GONE : View.VISIBLE);
+        moveRight.setVisibility(Dips.isSmallScreen() ? View.GONE : View.VISIBLE);
+        zoomPlus.setVisibility(Dips.isSmallScreen() ? View.GONE : View.VISIBLE);
+        zoomMinus.setVisibility(Dips.isSmallScreen() ? View.GONE : View.VISIBLE);
+        if (dc.isTextFormat()) {
             moveLeft.setVisibility(View.GONE);
             moveRight.setVisibility(View.GONE);
             zoomPlus.setVisibility(View.GONE);
             zoomMinus.setVisibility(View.GONE);
             crop.setVisibility(View.GONE);
             cut.setVisibility(View.GONE);
+            onModeChange.setVisibility(View.GONE);
+            if (Dips.isEInk(dc.getActivity()) || AppState.get().isEnableBC) {
+                onBC.setVisibility(View.VISIBLE);
+            } else {
+                onBC.setVisibility(View.GONE);
+            }
         }
 
-        if (AppState.get().isCrop) {
-            TintUtil.setTintImage(crop, TintUtil.COLOR_ORANGE);
-        } else {
-            TintUtil.setTintImage(crop, Color.WHITE);
-        }
-
-        if (AppState.get().isCut) {
-            TintUtil.setTintImage(cut, TintUtil.COLOR_ORANGE);
-        } else {
-            TintUtil.setTintImage(cut, Color.WHITE);
-        }
+        crop.underline(AppState.get().isCrop);
+        cut.underline(AppState.get().isCut);
 
         progressDraw.updateProgress(current - 1);
+
+        dc.getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        LOG.d("FLAG addFlags", "FLAG_KEEP_SCREEN_ON", dc.getActivity().getWindow().getAttributes().flags);
+        handler.removeCallbacks(clearFlags);
+        handler.postDelayed(clearFlags, TimeUnit.MINUTES.toMillis(AppState.get().inactivityTime));
     }
 
+    Runnable clearFlags = new Runnable() {
+
+        @Override
+        public void run() {
+            try {
+                dc.getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                LOG.d("FLAG clearFlags", "FLAG_KEEP_SCREEN_ON", dc.getActivity().getWindow().getAttributes().flags);
+            } catch (Exception e) {
+                LOG.e(e);
+            }
+        }
+    };
+
     public void showChapter() {
-        if (TxtUtils.isNotEmpty(controller.getCurrentChapter())) {
-            bookName.setText(bookTitle + " – " + controller.getCurrentChapter().trim());
+        if (TxtUtils.isNotEmpty(dc.getCurrentChapter())) {
+            bookName.setText(bookTitle + " – " + dc.getCurrentChapter().trim());
         } else {
             bookName.setText(bookTitle);
 
@@ -488,7 +487,7 @@ public class DocumentWrapperUI {
     public void updateLock() {
         // int mode = View.VISIBLE;
 
-        if (AppState.getInstance().isLocked) {
+        if (AppState.get().isLocked) {
             lockUnlock.setImageResource(R.drawable.glyphicons_204_lock);
             lockUnlockTop.setImageResource(R.drawable.glyphicons_204_lock);
             // lockUnlock.setColorFilter(a.getResources().getColor(R.color.tint_yellow));
@@ -505,45 +504,38 @@ public class DocumentWrapperUI {
     }
 
     public void showHideHistory() {
-        linkHistory.setVisibility(controller.getLinkHistory().isEmpty() ? View.GONE : View.VISIBLE);
+        linkHistory.setVisibility(dc.getLinkHistory().isEmpty() ? View.GONE : View.VISIBLE);
     }
+
+    Runnable updateTimePower = new Runnable() {
+
+        @Override
+        public void run() {
+            try {
+                if (currentTime != null) {
+                    currentTime.setText(UiSystemUtils.getSystemTime(dc.getActivity()));
+
+                    int myLevel = UiSystemUtils.getPowerLevel(dc.getActivity());
+                    batteryLevel.setText(myLevel + "%");
+                }
+            } catch (Exception e) {
+                LOG.e(e);
+            }
+            LOG.d("Update time and power");
+            handlerTimer.postDelayed(updateTimePower, AppState.APP_UPDATE_TIME_IN_UI);
+
+        }
+    };
 
     public void initUI(final Activity a) {
         this.a = a;
-
-        // AppState.get().isMusicianMode &&
-        if (!AppsConfig.checkIsProInstalled(a) && AppsConfig.ADMOB_FULLSCREEN != null) {
-            handler.postDelayed(new Runnable() {
-
-                @Override
-                public void run() {
-                    mInterstitialAd = new InterstitialAd(a);
-                    mInterstitialAd.setAdUnitId(AppsConfig.ADMOB_FULLSCREEN);
-                    mInterstitialAd.setAdListener(new AdListener() {
-                        @Override
-                        public void onAdClosed() {
-                            closeAndRunList(false);
-                        }
-                    });
-
-                    try {
-                        mInterstitialAd.loadAd(ADS.adRequest);
-                    } catch (Exception e) {
-                        LOG.e(e);
-                    }
-
-                }
-            }, ADS.FULL_SCREEN_TIMEOUT);
-
-        }
 
         linkHistory = (ImageView) a.findViewById(R.id.linkHistory);
         linkHistory.setOnClickListener(onLinkHistory);
 
         menuLayout = a.findViewById(R.id.menuLayout);
 
-        pages = a.findViewById(R.id.pagsLayout);
-        lineNavgination = a.findViewById(R.id.lineNavgination);
+        bottomBar = a.findViewById(R.id.bottomBar);
         imageMenuArrow = (ImageView) a.findViewById(R.id.imageMenuArrow);
         adFrame = a.findViewById(R.id.adFrame);
 
@@ -555,15 +547,8 @@ public class DocumentWrapperUI {
         titleBar = a.findViewById(R.id.titleBar);
         titleBar.setOnClickListener(onMenu);
 
-        brigtnessProgressView = (BrigtnessDraw) a.findViewById(R.id.brigtnessProgressView);
-        brigtnessProgressView.setActivity(a);
-        brigtnessProgressView.setOnSingleClickListener(new OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                controller.onLeftPress();
-            }
-        });
+        overlay = a.findViewById(R.id.overlay);
+        overlay.setVisibility(View.VISIBLE);
 
         reverseKeysIndicator = (TextView) a.findViewById(R.id.reverseKeysIndicator);
         // reverseKeysIndicator.setOnClickListener(onReverseKeys);
@@ -611,7 +596,7 @@ public class DocumentWrapperUI {
         moveLeft = a.findViewById(R.id.moveLeft);
         moveLeft.setOnClickListener(onMoveLeft);
 
-        View moveCenter = a.findViewById(R.id.moveCenter);
+        final ImageView moveCenter = (ImageView) a.findViewById(R.id.moveCenter);
         moveCenter.setOnClickListener(onMoveCenter);
 
         moveRight = a.findViewById(R.id.moveRight);
@@ -619,29 +604,45 @@ public class DocumentWrapperUI {
 
         ImageView brightness = (ImageView) a.findViewById(R.id.brightness);
         brightness.setOnClickListener(onSun);
-        brightness.setImageResource(!AppState.get().isInvert ? R.drawable.glyphicons_232_sun : R.drawable.glyphicons_2_moon);
+        brightness.setImageResource(!AppState.get().isDayNotInvert ? R.drawable.glyphicons_232_sun : R.drawable.glyphicons_2_moon);
+
+        if (Dips.isEInk(dc.getActivity())) {
+            brightness.setVisibility(View.GONE);
+            AppState.get().isDayNotInvert = true;
+        }
+
+        onBC = (UnderlineImageView) a.findViewById(R.id.onBC);
+        onBC.setOnClickListener(onBCclick);
+        onBC.underline(AppState.get().isEnableBC);
 
         a.findViewById(R.id.toPage).setOnClickListener(toPage);
 
-        crop = (ImageView) a.findViewById(R.id.crop);
+        crop = (UnderlineImageView) a.findViewById(R.id.crop);
         crop.setOnClickListener(onCrop);
 
         if (AppState.get().isCut) {
             crop.setVisibility(View.GONE);
         }
 
-        cut = (ImageView) a.findViewById(R.id.cut);
+        cut = (UnderlineImageView) a.findViewById(R.id.cut);
         cut.setOnClickListener(onCut);
+        cut.setVisibility(View.GONE);
+
+        onModeChange = (ImageView) a.findViewById(R.id.onModeChange);
+        onModeChange.setOnClickListener(onModeChangeClick);
+        onModeChange.setImageResource(AppState.get().isCut ? R.drawable.glyphicons_page_split : R.drawable.glyphicons_two_page_one);
 
         View prefTop = a.findViewById(R.id.prefTop);
         prefTop.setOnClickListener(onPrefTop);
 
-        View fullscreen = a.findViewById(R.id.fullscreen);
+        ImageView fullscreen = (ImageView) a.findViewById(R.id.fullscreen);
         fullscreen.setOnClickListener(onFull);
+        fullscreen.setImageResource(AppState.get().isFullScreen ? R.drawable.glyphicons_487_fit_frame_to_image : R.drawable.glyphicons_488_fit_image_to_frame);
 
-        View close = a.findViewById(R.id.close);
-        close.setOnClickListener(onClose);
-        close.setOnLongClickListener(onCloseLongClick);
+        onCloseBook = a.findViewById(R.id.close);
+        onCloseBook.setOnClickListener(onClose);
+        onCloseBook.setOnLongClickListener(onCloseLongClick);
+        onCloseBook.setVisibility(View.INVISIBLE);
 
         showSearch = (ImageView) a.findViewById(R.id.onShowSearch);
         showSearch.setOnClickListener(onShowSearch);
@@ -673,6 +674,17 @@ public class DocumentWrapperUI {
         onTTSStatus(null);
         ttsActive.setOnClickListener(onTextToSpeach);
 
+        ttsActive.setOnLongClickListener(new OnLongClickListener() {
+
+            @Override
+            public boolean onLongClick(View v) {
+                Vibro.vibrate();
+                TTSEngine.get().stop();
+                ttsActive.setVisibility(View.GONE);
+                return true;
+            }
+        });
+
         batteryIcon = (ImageView) a.findViewById(R.id.batteryIcon);
         clockIcon = (ImageView) a.findViewById(R.id.clockIcon);
 
@@ -685,7 +697,15 @@ public class DocumentWrapperUI {
         bookmarks.setOnClickListener(onBookmarks);
         bookmarks.setOnLongClickListener(onBookmarksLong);
 
+        toastBrightnessText = (TextView) a.findViewById(R.id.toastBrightnessText);
+        toastBrightnessText.setVisibility(View.GONE);
+        TintUtil.setDrawableTint(toastBrightnessText.getCompoundDrawables()[0], Color.WHITE);
+
+        TextView modeName = (TextView) a.findViewById(R.id.modeName);
+        modeName.setText(AppState.get().nameVerticalMode);
+
         currentPageIndex = (TextView) a.findViewById(R.id.currentPageIndex);
+        currentPageIndex.setVisibility(View.GONE);
         currentSeek = (TextView) a.findViewById(R.id.currentSeek);
         maxSeek = (TextView) a.findViewById(R.id.maxSeek);
         bookName = (TextView) a.findViewById(R.id.bookName);
@@ -703,15 +723,33 @@ public class DocumentWrapperUI {
             batteryLevel.setTypeface(BookCSS.getNormalTypeFace());
         }
 
+        currentSeek.setOnLongClickListener(new OnLongClickListener() {
+
+            @Override
+            public boolean onLongClick(View v) {
+                Dialogs.showDeltaPage(anchor, dc, dc.getCurentPageFirst1(), updateUIRunnable);
+                return true;
+            }
+        });
+        maxSeek.setOnLongClickListener(new OnLongClickListener() {
+
+            @Override
+            public boolean onLongClick(View v) {
+                Dialogs.showDeltaPage(anchor, dc, dc.getCurentPageFirst1(), updateUIRunnable);
+                return true;
+            }
+        });
+
         View thumbnail = a.findViewById(R.id.thumbnail);
         thumbnail.setOnClickListener(onThumbnail);
 
-        View itemMenu = a.findViewById(R.id.itemMenu);
-        itemMenu.setOnClickListener(onItemMenu);
+        View bookMenu = a.findViewById(R.id.bookMenu);
+        bookMenu.setOnClickListener(onItemMenu);
+        modeName.setOnClickListener(onItemMenu);
 
         progressDraw = (ProgressDraw) a.findViewById(R.id.progressDraw);
 
-        AppState.getInstance().isAutoScroll = false;
+        AppState.get().isAutoScroll = false;
 
         ImageView recent = (ImageView) a.findViewById(R.id.onRecent);
         recent.setOnClickListener(onRecent);
@@ -744,12 +782,13 @@ public class DocumentWrapperUI {
 
         });
         updateSeekBarColorAndSize();
+        BrightnessHelper.updateOverlay(overlay);
 
         // bottom 1
         TintUtil.setStatusBarColor(a);
 
         TintUtil.setTintBgSimple(a.findViewById(R.id.menuLayout), TRANSPARENT_UI);
-        TintUtil.setTintBgSimple(a.findViewById(R.id.document_footer), TRANSPARENT_UI);
+        TintUtil.setTintBgSimple(a.findViewById(R.id.bottomBar1), TRANSPARENT_UI);
         TintUtil.setBackgroundFillColorBottomRight(lirbiLogo, ColorUtils.setAlphaComponent(TintUtil.color, TRANSPARENT_UI));
         tintSpeed();
 
@@ -781,8 +820,7 @@ public class DocumentWrapperUI {
             reverseKeysIndicator.setVisibility(View.GONE);
             textToSpeachTop.setVisibility(View.GONE);
             progressDraw.setVisibility(View.GONE);
-            brigtnessProgressView.setVisibility(View.GONE);
-            textToSpeach.setVisibility(View.GONE);
+            modeName.setText(AppState.get().nameMusicianMode);
         }
 
         currentSeek.setVisibility(View.GONE);
@@ -796,25 +834,24 @@ public class DocumentWrapperUI {
         TintUtil.setBackgroundFillColorBottomRight(ttsActive, ColorUtils.setAlphaComponent(TintUtil.color, 230));
 
         TintUtil.setTintText(bookName, TintUtil.getStatusBarColor());
-        TintUtil.setTintImage(textToSpeachTop, TintUtil.getStatusBarColor());
-        TintUtil.setTintImage(lockUnlockTop, TintUtil.getStatusBarColor());
-        TintUtil.setTintImage(nextScreenType, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(textToSpeachTop, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(lockUnlockTop, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(nextScreenType, TintUtil.getStatusBarColor());
         TintUtil.setTintText(currentPageIndex, TintUtil.getStatusBarColor());
         TintUtil.setTintText(currentTime, TintUtil.getStatusBarColor());
         TintUtil.setTintText(batteryLevel, TintUtil.getStatusBarColor());
         TintUtil.setTintText(reverseKeysIndicator, ColorUtils.setAlphaComponent(TintUtil.getStatusBarColor(), 200));
 
-        TintUtil.setTintImage(goToPage1Top, TintUtil.getStatusBarColor());
-        TintUtil.setTintImage((ImageView) closeTop, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(goToPage1Top, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha((ImageView) closeTop, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(toolBarButton, TintUtil.getStatusBarColor());
+        TintUtil.setTintImageWithAlpha(clockIcon, TintUtil.getStatusBarColor()).setAlpha(200);
+        TintUtil.setTintImageWithAlpha(batteryIcon, TintUtil.getStatusBarColor()).setAlpha(200);
 
-        TintUtil.setTintImage(toolBarButton, TintUtil.getStatusBarColor());
-        TintUtil.setTintImage(clockIcon, TintUtil.getStatusBarColor()).setAlpha(200);
-        TintUtil.setTintImage(batteryIcon, TintUtil.getStatusBarColor()).setAlpha(200);
-
-        int titleColor = AppState.get().isInvert ? MagicHelper.otherColor(AppState.get().colorDayBg, -0.05f) : MagicHelper.otherColor(AppState.get().colorNigthBg, 0.05f);
+        int titleColor = AppState.get().isDayNotInvert ? MagicHelper.otherColor(AppState.get().colorDayBg, -0.05f) : MagicHelper.otherColor(AppState.get().colorNigthBg, 0.05f);
         titleBar.setBackgroundColor(titleColor);
 
-        int progressColor = AppState.get().isInvert ? AppState.get().statusBarColorDay : MagicHelper.otherColor(AppState.get().statusBarColorNight, +0.2f);
+        int progressColor = AppState.get().isDayNotInvert ? AppState.get().statusBarColorDay : MagicHelper.otherColor(AppState.get().statusBarColorNight, +0.2f);
         progressDraw.updateColor(progressColor);
         progressDraw.getLayoutParams().height = Dips.dpToPx(AppState.get().progressLineHeight);
         progressDraw.requestLayout();
@@ -829,7 +866,6 @@ public class DocumentWrapperUI {
 
         int iconSize = Dips.spToPx(AppState.get().statusBarTextSizeAdv);
         int smallIconSize = iconSize - Dips.dpToPx(5);
-        int panelSize = (int) (iconSize * 1.5);
 
         textToSpeachTop.getLayoutParams().height = textToSpeachTop.getLayoutParams().width = iconSize;
         lockUnlockTop.getLayoutParams().height = lockUnlockTop.getLayoutParams().width = iconSize;
@@ -845,6 +881,11 @@ public class DocumentWrapperUI {
 
     }
 
+    @Subscribe
+    public void onMessegeBrightness(MessegeBrightness msg) {
+        BrightnessHelper.onMessegeBrightness(msg, toastBrightnessText, overlay);
+    }
+
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public void tintSpeed() {
         if (Build.VERSION.SDK_INT >= 16) {
@@ -856,14 +897,14 @@ public class DocumentWrapperUI {
     }
 
     public void showEditDialogIfNeed() {
-        DragingDialogs.editColorsPanel(anchor, controller, drawView, true);
+        DragingDialogs.editColorsPanel(anchor, dc, drawView, true);
     }
 
     View.OnClickListener onRecent = new View.OnClickListener() {
 
         @Override
         public void onClick(View v) {
-            DragingDialogs.recentBooks(anchor, controller);
+            DragingDialogs.recentBooks(anchor, dc);
         }
     };
 
@@ -871,17 +912,18 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View v) {
-            ShareDialog.show(a, controller.getCurrentBook(), new Runnable() {
+            ShareDialog.show(a, dc.getCurrentBook(), new Runnable() {
 
                 @Override
                 public void run() {
-                    if (controller.getCurrentBook().delete()) {
+                    if (dc.getCurrentBook().delete()) {
                         TempHolder.listHash++;
-                        AppDB.get().deleteBy(controller.getCurrentBook().getPath());
-                        controller.getActivity().finish();
+                        AppDB.get().deleteBy(dc.getCurrentBook().getPath());
+                        dc.getActivity().finish();
                     }
                 }
-            }, controller.getCurentPage() - 1, DocumentWrapperUI.this);
+            }, dc.getCurentPage() - 1, DocumentWrapperUI.this, dc);
+            Keyboards.hideNavigation(a);
         }
     };
 
@@ -898,10 +940,11 @@ public class DocumentWrapperUI {
         @Override
         public void onClick(final View v) {
             if (AppState.get().isCut) {
+                onModeChange.setImageResource(R.drawable.glyphicons_two_page_one);
                 onCut.onClick(null);
                 return;
             }
-            DragingDialogs.textToSpeachDialog(anchor, controller);
+            DragingDialogs.textToSpeachDialog(anchor, dc);
         }
     };
 
@@ -909,7 +952,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View v) {
-            DragingDialogs.thumbnailDialog(anchor, controller);
+            DragingDialogs.thumbnailDialog(anchor, dc);
         }
     };
 
@@ -925,7 +968,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
-            controller.onGoToPage(progress + 1);
+            dc.onGoToPage(progress + 1);
             updateUI();
         }
     };
@@ -942,7 +985,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onProgressChanged(final SeekBar seekBar, final int progress, final boolean fromUser) {
-            AppState.getInstance().autoScrollSpeed = progress + 1;
+            AppState.get().autoScrollSpeed = progress + 1;
             updateSpeedLabel();
 
             // hideSeekBarInReadMode();
@@ -950,42 +993,54 @@ public class DocumentWrapperUI {
     };
 
     public void doDoubleTap(int x, int y) {
-        if (AppState.getInstance().isMusicianMode) {
-            controller.alignDocument();
+        if (AppState.get().isMusicianMode) {
+            dc.alignDocument();
         } else {
-            if (AppState.get().doubleClickAction == AppState.DOUBLE_CLICK_ZOOM_IN_OUT) {
-                controller.onZoomInOut(x, y);
+            if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_ZOOM_IN_OUT) {
+                dc.onZoomInOut(x, y);
                 AppState.get().isEditMode = false;
-                showHide();
-            } else if (AppState.get().doubleClickAction == AppState.DOUBLE_CLICK_ADJUST_PAGE) {
-                controller.alignDocument();
-            } else if (AppState.get().doubleClickAction == AppState.DOUBLE_CLICK_CENTER_HORIZONTAL) {
-                controller.centerHorizontal();
-            } else if (AppState.get().doubleClickAction == AppState.DOUBLE_CLICK_AUTOSCROLL) {
+                hideShow();
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_ADJUST_PAGE) {
+                dc.alignDocument();
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CENTER_HORIZONTAL) {
+                dc.centerHorizontal();
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_AUTOSCROLL) {
                 onAutoScrollClick();
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_BOOK) {
+                closeAndRunList();
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_HIDE_APP) {
+                Apps.showDesctop(a);
+            } else if (AppState.get().doubleClickAction1 == AppState.DOUBLE_CLICK_CLOSE_BOOK_AND_APP) {
+                dc.onCloseActivityFinal(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        MainTabs2.closeApp(dc.getActivity());
+                    }
+                });
             }
         }
     }
 
     public void doShowHideWrapperControlls() {
-        AppState.getInstance().isEditMode = !AppState.getInstance().isEditMode;
-        showHide();
+        AppState.get().isEditMode = !AppState.get().isEditMode;
+        hideShow();
 
     }
 
     public void showHideHavigationBar() {
-        if (!AppState.getInstance().isEditMode && AppState.getInstance().isFullScrean()) {
+        if (!AppState.get().isEditMode && AppState.get().isFullScreen) {
             Keyboards.hideNavigation(a);
         }
     }
 
     public void doChooseNextType(View view) {
-        final PopupMenu popupMenu = new PopupMenu(view.getContext(), view);
+        final MyPopupMenu popupMenu = new MyPopupMenu(view.getContext(), view);
 
-        String pages = controller.getString(R.string.by_pages);
-        String screen = controller.getString(R.string.of_screen).toLowerCase(Locale.US);
-        String screens = controller.getString(R.string.by_screans);
-        final List<Integer> values = Arrays.asList(AppState.NEXT_SCREEN_SCROLL_BY_PAGES, 100, 95, 75, 50, 25, 5);
+        String pages = dc.getString(R.string.by_pages);
+        String screen = dc.getString(R.string.of_screen).toLowerCase(Locale.US);
+        String screens = dc.getString(R.string.by_screans);
+        final List<Integer> values = Arrays.asList(AppState.NEXT_SCREEN_SCROLL_BY_PAGES, 100, 95, 75, 50, 25, 10);
 
         for (int i = 0; i < values.size(); i++) {
             final int n = i;
@@ -1000,34 +1055,82 @@ public class DocumentWrapperUI {
                 public boolean onMenuItemClick(MenuItem item) {
                     AppState.get().nextScreenScrollBy = values.get(n);
                     initNextType();
-                    Keyboards.hideNavigation(controller.getActivity());
+                    Keyboards.hideNavigation(dc.getActivity());
                     return false;
                 }
             });
         }
+
+        popupMenu.getMenu().add(R.string.custom_value).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                Activity a = dc.getActivity();
+                final AlertDialog.Builder builder = new AlertDialog.Builder(a);
+                builder.setTitle(R.string.custom_value);
+
+                final CustomSeek myValue = new CustomSeek(a);
+                myValue.init(1, 100, AppState.get().nextScreenScrollMyValue);
+                myValue.setOnSeekChanged(new IntegerResponse() {
+
+                    @Override
+                    public boolean onResultRecive(int result) {
+                        AppState.get().nextScreenScrollMyValue = result;
+                        myValue.setValueText(AppState.get().nextScreenScrollMyValue + "%");
+                        return false;
+                    }
+                });
+                myValue.setValueText(AppState.get().nextScreenScrollMyValue + "%");
+
+                builder.setView(myValue);
+
+                builder.setPositiveButton(R.string.apply, new OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        AppState.get().nextScreenScrollBy = AppState.get().nextScreenScrollMyValue;
+                        initNextType();
+                        Keyboards.hideNavigation(dc.getActivity());
+
+                    }
+                });
+                builder.setNegativeButton(R.string.cancel, new OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+                builder.show();
+
+                return false;
+            }
+
+        });
+
         popupMenu.show();
 
     }
 
     public void doHideShowToolBar() {
-        AppState.getInstance().isShowToolBar = !AppState.getInstance().isShowToolBar;
+        AppState.get().isShowToolBar = !AppState.get().isShowToolBar;
         initToolBarPlusMinus();
     }
 
     public void initToolBarPlusMinus() {
-        if (AppState.getInstance().isShowToolBar) {
+        if (AppState.get().isShowToolBar) {
             toolBarButton.setImageResource(R.drawable.glyphicons_336_pushpin);
         } else {
             toolBarButton.setImageResource(R.drawable.glyphicons_200_ban);
         }
-        if (AppState.getInstance().isEditMode || AppState.getInstance().isShowToolBar) {
+        if (AppState.get().isEditMode || AppState.get().isShowToolBar) {
             titleBar.setVisibility(View.VISIBLE);
         } else {
             titleBar.setVisibility(View.GONE);
         }
 
         progressDraw.setVisibility(AppState.get().isShowReadingProgress ? View.VISIBLE : View.GONE);
-        brigtnessProgressView.setVisibility(AppState.get().isBrighrnessEnable ? View.VISIBLE : View.GONE);
 
         toolBarButton.setVisibility(View.VISIBLE);
 
@@ -1043,9 +1146,9 @@ public class DocumentWrapperUI {
             }
         } else {
             if (AppState.get().nextScreenScrollBy == 100) {
-                nextTypeBootom.setText(controller.getString(R.string.by_screans));
+                nextTypeBootom.setText(dc.getString(R.string.by_screans));
             } else {
-                nextTypeBootom.setText(AppState.get().nextScreenScrollBy + "% " + controller.getString(R.string.of_screen));
+                nextTypeBootom.setText(AppState.get().nextScreenScrollBy + "% " + dc.getString(R.string.of_screen));
             }
             nextScreenType.setImageResource(R.drawable.glyphicons_halp_page);
 
@@ -1056,48 +1159,48 @@ public class DocumentWrapperUI {
 
     }
 
-    public void showHide() {
-        if (AppState.getInstance().isEditMode) {
+    public void hideShow() {
+        if (AppState.get().isEditMode) {
             show();
         } else {
             hide();
         }
         initToolBarPlusMinus();
 
-        if (AppState.getInstance().isAutoScroll) {
+        if (AppState.get().isAutoScroll) {
             autoScroll.setImageResource(R.drawable.glyphicons_175_pause);
         } else {
             autoScroll.setImageResource(R.drawable.glyphicons_174_play);
         }
 
-        if (AppState.getInstance().isMusicianMode) {
-            if (AppState.getInstance().isAutoScroll) {
+        if (AppState.get().isMusicianMode) {
+            if (AppState.get().isAutoScroll) {
                 seekSpeedLayot.setVisibility(View.VISIBLE);
             } else {
                 seekSpeedLayot.setVisibility(View.GONE);
             }
         } else {
-            if (AppState.getInstance().isEditMode && AppState.getInstance().isAutoScroll) {
+            if (AppState.get().isEditMode && AppState.get().isAutoScroll) {
                 seekSpeedLayot.setVisibility(View.VISIBLE);
             } else {
                 seekSpeedLayot.setVisibility(View.GONE);
             }
         }
 
-        if (AppState.getInstance().isMusicianMode) {
+        if (AppState.get().isMusicianMode) {
             lirbiLogo.setVisibility(View.VISIBLE);
         } else {
             lirbiLogo.setVisibility(View.GONE);
         }
 
         // hideSeekBarInReadMode();
-        showHideHavigationBar();
+        // showHideHavigationBar();
+        DocumentController.chooseFullScreen(dc.getActivity(), AppState.get().isFullScreen);
     }
 
     public void hide() {
         menuLayout.setVisibility(View.GONE);
-        pages.setVisibility(View.GONE);
-        lineNavgination.setVisibility(View.GONE);
+        bottomBar.setVisibility(View.GONE);
         adFrame.setVisibility(View.GONE);
         adFrame.setClickable(false);
         imageMenuArrow.setImageResource(android.R.drawable.arrow_down_float);
@@ -1107,7 +1210,7 @@ public class DocumentWrapperUI {
     }
 
     public void _hideSeekBarInReadMode() {
-        if (!AppState.getInstance().isEditMode) {
+        if (!AppState.get().isEditMode) {
             handler.removeCallbacks(hideSeekBar);
             handler.postDelayed(hideSeekBar, 5000);
         }
@@ -1117,7 +1220,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void run() {
-            if (!AppState.getInstance().isMusicianMode) {
+            if (!AppState.get().isMusicianMode) {
                 seekSpeedLayot.setVisibility(View.GONE);
             }
 
@@ -1131,15 +1234,14 @@ public class DocumentWrapperUI {
 
         updateLock();
 
-        pages.setVisibility(View.VISIBLE);
-        lineNavgination.setVisibility(View.VISIBLE);
+        bottomBar.setVisibility(View.VISIBLE);
         adFrame.setVisibility(View.VISIBLE);
         adFrame.setClickable(true);
 
         imageMenuArrow.setImageResource(android.R.drawable.arrow_up_float);
 
-        // if (AppState.getInstance().isAutoScroll &&
-        // AppState.getInstance().isEditMode) {
+        // if (AppState.get().isAutoScroll &&
+        // AppState.get().isEditMode) {
         // seekSpeedLayot.setVisibility(View.VISIBLE);
         // }
 
@@ -1155,7 +1257,16 @@ public class DocumentWrapperUI {
     };
 
     public void showSearchDialog() {
-        DragingDialogs.searchMenu(anchor, controller);
+        if (AppState.get().isCut) {
+            onModeChange.setImageResource(R.drawable.glyphicons_two_page_one);
+            AppState.get().isCut = !false;
+            onCut.onClick(null);
+        }
+        if (AppState.get().isCrop) {
+            onCrop.onClick(null);
+        }
+
+        DragingDialogs.searchMenu(anchor, dc, "");
     }
 
     public View.OnClickListener onAutoScroll = new View.OnClickListener() {
@@ -1167,14 +1278,14 @@ public class DocumentWrapperUI {
     };
 
     public void onAutoScrollClick() {
-        AppState.getInstance().isAutoScroll = !AppState.getInstance().isAutoScroll;
+        AppState.get().isAutoScroll = !AppState.get().isAutoScroll;
         // changeAutoScrollButton();
-        controller.onAutoScroll();
+        dc.onAutoScroll();
         updateUI();
     }
 
     // public void changeAutoScrollButton() {
-    // if (AppState.getInstance().isAutoScroll) {
+    // if (AppState.get().isAutoScroll) {
     // autoScroll.setImageResource(android.R.drawable.ic_media_pause);
     // seekSpeedLayot.setVisibility(View.VISIBLE);
     // } else {
@@ -1188,7 +1299,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onLinkHistory();
+            dc.onLinkHistory();
             updateUI();
         }
     };
@@ -1197,14 +1308,14 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            DragingDialogs.showContent(anchor, controller);
+            DragingDialogs.showContent(anchor, dc);
         }
     };
     public View.OnClickListener onLockUnlock = new View.OnClickListener() {
 
         @Override
         public void onClick(final View arg0) {
-            AppState.getInstance().isLocked = !AppState.getInstance().isLocked;
+            AppState.get().isLocked = !AppState.get().isLocked;
             updateLock();
         }
     };
@@ -1213,7 +1324,11 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            DragingDialogs.editColorsPanel(anchor, controller, drawView, false);
+            if (AppState.get().isCrop) {
+                onCrop.onClick(null);
+            }
+
+            DragingDialogs.editColorsPanel(anchor, dc, drawView, false);
         }
     };
 
@@ -1221,7 +1336,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            DragingDialogs.addBookmarks(anchor, controller, new Runnable() {
+            DragingDialogs.addBookmarks(anchor, dc, new Runnable() {
 
                 @Override
                 public void run() {
@@ -1234,7 +1349,7 @@ public class DocumentWrapperUI {
 
         @Override
         public boolean onLongClick(final View arg0) {
-            DragingDialogs.addBookmarksLong(anchor, controller);
+            DragingDialogs.addBookmarksLong(anchor, dc);
             return true;
         }
     };
@@ -1252,7 +1367,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(View v) {
-            controller.onScrollY(0);
+            dc.onScrollY(0);
             updateUI();
         }
     };
@@ -1263,7 +1378,7 @@ public class DocumentWrapperUI {
         public void onClick(final View arg0) {
             AppState.get().isMusicianMode = false;
             initUI(a);
-            showHide();
+            hideShow();
         }
     };
 
@@ -1298,9 +1413,15 @@ public class DocumentWrapperUI {
     public View.OnClickListener onFull = new View.OnClickListener() {
 
         @Override
-        public void onClick(final View arg0) {
-            AppState.getInstance().setFullScrean(!AppState.getInstance().isFullScrean());
-            DocumentController.chooseFullScreen(a, AppState.getInstance().isFullScrean());
+        public void onClick(final View v) {
+            AppState.get().isFullScreen = !AppState.get().isFullScreen;
+            ((ImageView) v).setImageResource(AppState.get().isFullScreen ? R.drawable.glyphicons_487_fit_frame_to_image : R.drawable.glyphicons_488_fit_image_to_frame);
+            DocumentController.chooseFullScreen(a, AppState.get().isFullScreen);
+
+            // if (controller.isTextFormat()) {
+            // onRefresh.run();
+            // controller.restartActivity();
+            // }
         }
     };
     public View.OnClickListener onScreenMode = new View.OnClickListener() {
@@ -1312,11 +1433,27 @@ public class DocumentWrapperUI {
         }
     };
 
+    public View.OnClickListener onBCclick = new View.OnClickListener() {
+
+        @Override
+        public void onClick(final View arg0) {
+            DragingDialogs.contrastAndBrigtness(anchor, dc, new Runnable() {
+
+                @Override
+                public void run() {
+                    onBC.underline(AppState.get().isEnableBC);
+                    dc.updateRendering();
+                }
+            }, null);
+        }
+    };
+
     public View.OnClickListener onSun = new View.OnClickListener() {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onNightMode();
+            arg0.setEnabled(false);
+            dc.onNightMode();
         }
     };
 
@@ -1324,7 +1461,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.toPageDialog();
+            dc.toPageDialog();
         }
     };
 
@@ -1332,8 +1469,50 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onCrop();
+            dc.onCrop();
             updateUI();
+
+        }
+    };
+
+    private void closeDialogs() {
+        anchor.setVisibility(View.GONE);
+        anchor.setTag("backGo");
+        anchor.removeAllViews();
+    }
+
+    public View.OnClickListener onModeChangeClick = new View.OnClickListener() {
+
+        @Override
+        public void onClick(final View v) {
+            MyPopupMenu p = new MyPopupMenu(v.getContext(), v);
+
+            p.getMenu().add(R.string.one_page).setIcon(R.drawable.glyphicons_two_page_one).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                @Override
+                public boolean onMenuItemClick(MenuItem item) {
+                    closeDialogs();
+                    onModeChange.setImageResource(R.drawable.glyphicons_two_page_one);
+                    AppState.get().isCut = !false;
+                    onCut.onClick(null);
+                    hideShowEditIcon();
+                    return false;
+                }
+            });
+            p.getMenu().add(R.string.half_page).setIcon(R.drawable.glyphicons_page_split).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+
+                @Override
+                public boolean onMenuItemClick(MenuItem item) {
+                    closeDialogs();
+                    onModeChange.setImageResource(R.drawable.glyphicons_page_split);
+                    AppState.get().isCut = !true;
+                    onCut.onClick(null);
+                    hideShowEditIcon();
+                    return false;
+                }
+            });
+            p.show();
+            Keyboards.hideNavigation(dc.getActivity());
 
         }
     };
@@ -1348,22 +1527,22 @@ public class DocumentWrapperUI {
             BookSettings bookSettings = SettingsManager.getBookSettings();
             if (bookSettings != null) {
                 bookSettings.updateFromAppState();
+                bookSettings.save();
             }
-            SettingsManager.storeBookSettings();
 
             crop.setVisibility(AppState.get().isCut ? View.GONE : View.VISIBLE);
 
             SettingsManager.toggleCropMode(true);
 
-            controller.onCrop();// crop false
-            controller.updateRendering();
-            controller.alignDocument();
+            dc.onCrop();// crop false
+            dc.updateRendering();
+            dc.alignDocument();
 
             updateUI();
 
-            progressDraw.updatePageCount(controller.getPageCount() - 1);
-            titleBar.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, controller.getPageCount(), false));
-            progressDraw.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, controller.getPageCount(), false));
+            progressDraw.updatePageCount(dc.getPageCount() - 1);
+            titleBar.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
+            progressDraw.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
 
         }
     };
@@ -1373,19 +1552,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            prefDialog = DragingDialogs.preferences(anchor, controller, new Runnable() {
-
-                @Override
-                public void run() {
-                    double value = (getController().getCurentPage() + 0.0001) / getController().getPageCount();
-                    a.getIntent().putExtra(DocumentControllerHorizontalView.PERCENT_EXTRA, value);
-                    // titleBar.setBackgroundColor(MagicHelper.getBgColor());
-                    initToolBarPlusMinus();
-                    updateSeekBarColorAndSize();
-                    showHide();
-                    TTSEngine.get().stop();
-                }
-            }, new Runnable() {
+            prefDialog = DragingDialogs.preferences(anchor, dc, onRefresh, new Runnable() {
 
                 @Override
                 public void run() {
@@ -1396,17 +1563,39 @@ public class DocumentWrapperUI {
         }
     };
 
+    Runnable onRefresh = new Runnable() {
+
+        @Override
+        public void run() {
+            double value = (getController().getCurentPage() + 0.0001) / getController().getPageCount();
+            a.getIntent().putExtra(HorizontalModeController.PERCENT_EXTRA, value);
+            // titleBar.setBackgroundColor(MagicHelper.getBgColor());
+            initToolBarPlusMinus();
+            updateSeekBarColorAndSize();
+            hideShow();
+            updateUI();
+            TTSEngine.get().stop();
+            BrightnessHelper.updateOverlay(overlay);
+        }
+    };
+
     public View.OnClickListener onClose = new View.OnClickListener() {
 
         @Override
         public void onClick(final View arg0) {
-            closeAndRunList(false);
+            ImageLoader.getInstance().clearAllTasks();
+            anchor.setTag("backSpace");
+            anchor.removeAllViews();
+            anchor.setVisibility(View.GONE);
+
+            closeAndRunList();
         }
     };
     public View.OnLongClickListener onCloseLongClick = new View.OnLongClickListener() {
 
         @Override
         public boolean onLongClick(final View v) {
+            Vibro.vibrate();
             CloseAppDialog.showOnLongClickDialog(a, v, getController());
             return true;
         };
@@ -1416,7 +1605,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onSrollLeft();
+            dc.onSrollLeft();
         }
     };
 
@@ -1424,7 +1613,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.alignDocument();
+            dc.alignDocument();
         }
     };
 
@@ -1432,7 +1621,7 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onSrollRight();
+            dc.onSrollRight();
         }
     };
 
@@ -1444,17 +1633,25 @@ public class DocumentWrapperUI {
         }
     };
 
-    public void nextChose(final boolean animate) {
-        controller.checkReadingTimer();
+    public void nextChose(boolean animate) {
+        nextChose(animate, 0);
+    }
 
-        if (controller.closeFooterNotesDialog()) {
+    public void nextChose(boolean animate, int repeatCount) {
+        LOG.d("nextChose");
+        dc.checkReadingTimer();
+
+        if (dc.closeFooterNotesDialog()) {
             return;
         }
 
         if (AppState.get().nextScreenScrollBy == AppState.NEXT_SCREEN_SCROLL_BY_PAGES) {
-            controller.onNextPage(animate);
+            dc.onNextPage(animate);
         } else {
-            controller.onNextScreen(animate);
+            if (AppState.get().nextScreenScrollBy <= 50 && repeatCount == 0) {
+                animate = true;
+            }
+            dc.onNextScreen(animate);
         }
         if (AppState.get().isEditMode) {
             AppState.get().isEditMode = false;
@@ -1463,17 +1660,24 @@ public class DocumentWrapperUI {
 
     }
 
-    public void prevChose(final boolean animate) {
-        controller.checkReadingTimer();
+    public void prevChose(boolean animate) {
+        prevChose(animate, 0);
+    }
 
-        if (controller.closeFooterNotesDialog()) {
+    public void prevChose(boolean animate, int repeatCount) {
+        dc.checkReadingTimer();
+
+        if (dc.closeFooterNotesDialog()) {
             return;
         }
 
         if (AppState.get().nextScreenScrollBy == AppState.NEXT_SCREEN_SCROLL_BY_PAGES) {
-            controller.onPrevPage(animate);
+            dc.onPrevPage(animate);
         } else {
-            controller.onPrevScreen(animate);
+            if (AppState.get().nextScreenScrollBy <= 50 && repeatCount == 0) {
+                animate = true;
+            }
+            dc.onPrevScreen(animate);
         }
         if (AppState.get().isEditMode) {
             AppState.get().isEditMode = false;
@@ -1493,31 +1697,33 @@ public class DocumentWrapperUI {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onZoomInc();
+            dc.onZoomInc();
         }
     };
     public View.OnClickListener onMinus = new View.OnClickListener() {
 
         @Override
         public void onClick(final View arg0) {
-            controller.onZoomDec();
+            dc.onZoomDec();
         }
     };
 
     public void setTitle(final String title) {
         this.bookTitle = title;
-        if (controller != null && controller.getCurrentBook() != null && !controller.getCurrentBook().getName().toLowerCase(Locale.US).endsWith(".pdf")) {
+        hideShowEditIcon();
+
+    }
+
+    public void hideShowEditIcon() {
+        if (dc != null && dc.getCurrentBook() != null && !dc.getCurrentBook().getName().toLowerCase(Locale.US).endsWith(".pdf")) {
             editTop2.setVisibility(View.GONE);
+        } else {
+            if (AppState.get().isCut) {
+                editTop2.setVisibility(View.GONE);
+            } else {
+                editTop2.setVisibility(View.VISIBLE);
+            }
         }
-
-    }
-
-    public void nextPage() {
-        controller.onNextPage(false);
-    }
-
-    public void prevPage() {
-        controller.onPrevPage(false);
     }
 
     public DocumentGestureListener getDocumentListener() {
@@ -1541,36 +1747,86 @@ public class DocumentWrapperUI {
     }
 
     public DocumentController getController() {
-        return controller;
+        return dc;
     }
 
     public DrawView getDrawView() {
         return drawView;
     }
 
+    public void showHelp() {
+        if (AppState.get().isFirstTimeVertical) {
+            handler.postDelayed(new Runnable() {
+
+                @Override
+                public void run() {
+                    AppState.get().isFirstTimeVertical = false;
+                    AppState.get().isEditMode = true;
+                    hideShow();
+                    Views.showHelpToast(lockUnlock);
+
+                }
+            }, 1000);
+        }
+    }
+
     public void showOutline(final List<OutlineLinkWrapper> list, final int count) {
         try {
-            controller.activity.runOnUiThread(new Runnable() {
+            dc.activity.runOnUiThread(new Runnable() {
 
                 @Override
                 public void run() {
                     progressDraw.updateDivs(list);
-                    progressDraw.updatePageCount(controller.getPageCount() - 1);
-                    titleBar.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, controller.getPageCount(), false));
-                    progressDraw.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, controller.getPageCount(), false));
+                    progressDraw.updatePageCount(dc.getPageCount() - 1);
+                    titleBar.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
+                    progressDraw.setOnTouchListener(new HorizontallSeekTouchEventListener(onSeek, dc.getPageCount(), false));
                     if (TxtUtils.isListEmpty(list)) {
-                        TintUtil.setTintImage(onDocDontext, Color.LTGRAY);
+                        TintUtil.setTintImageWithAlpha(onDocDontext, Color.LTGRAY);
+                    }
+
+                    if (ExtUtils.isNoTextLayerForamt(dc.getCurrentBook().getPath())) {
+                        TintUtil.setTintImageWithAlpha(textToSpeach, Color.LTGRAY);
+                    }
+                    if (dc.isTextFormat()) {
+                        // TintUtil.setTintImage(lockUnlock, Color.LTGRAY);
                     }
 
                     currentSeek.setVisibility(View.VISIBLE);
                     maxSeek.setVisibility(View.VISIBLE);
                     seekBar.setVisibility(View.VISIBLE);
 
+                    onCloseBook.setVisibility(View.VISIBLE);
+                    currentPageIndex.setVisibility(View.VISIBLE);
+
+                    showHelp();
+
                 }
             });
         } catch (Exception e) {
             LOG.e(e);
         }
+
+    }
+
+    public void onResume() {
+        LOG.d("DocumentWrapperUI", "onResume");
+        handlerTimer.post(updateTimePower);
+
+        if (dc != null && TTSEngine.get().isPlaying()) {
+            dc.onGoToPage(AppState.get().lastBookPage);
+        }
+    }
+
+    public void onPause() {
+        LOG.d("DocumentWrapperUI", "onPause");
+        handlerTimer.removeCallbacks(updateTimePower);
+
+    }
+
+    public void onDestroy() {
+        LOG.d("DocumentWrapperUI", "onDestroy");
+        handlerTimer.removeCallbacksAndMessages(null);
+        handler.removeCallbacksAndMessages(null);
 
     }
 

@@ -1,7 +1,8 @@
-* Buku gratis di katalog 
-* Tambahkan link katalog ke favorit 
-* Tanda penghubung otomatis untuk bahasa buku 
-* Daftar penghargaan buku dan daftar buku terlaris 
-* Dukung katalog FBReader pribadi 
-* Tampilkan semua seri oleh Pengarang, oleh Genre 
-* Banyak perbaikan dan perbaikan kecil oleh umpan balik Anda.
+* Meningkatkan kecepatan dalam membuka semua format dan PDF, EPUB 
+* ThemeInk untuk perangkat dengan tinta elektronik 
+* Mengubah kontras dan kecerahan 
+* Kecerahan negatif 
+* Filter bluelight 
+* Kueri pelengkapan otomatis di perpustakaan 
+* Antarmuka yang ditingkatkan 
+* Banyak perbaikan dan perbaikan bug.

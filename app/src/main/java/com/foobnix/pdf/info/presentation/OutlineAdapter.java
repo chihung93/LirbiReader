@@ -2,6 +2,8 @@ package com.foobnix.pdf.info.presentation;
 
 import java.util.List;
 
+import com.foobnix.android.utils.Dips;
+import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.model.BookCSS;
@@ -20,6 +22,7 @@ import android.view.ViewParent;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -33,9 +36,11 @@ public class OutlineAdapter extends BaseAdapter {
     private final OutlineItemState[] states;
     private final SparseIntArray mapping = new SparseIntArray();
     private int currentId;
+    private int pages;
 
-    public OutlineAdapter(final Context context, final List<OutlineLinkWrapper> objects, final OutlineLinkWrapper current) {
+    public OutlineAdapter(final Context context, final List<OutlineLinkWrapper> objects, final OutlineLinkWrapper current, int pages) {
         this.context = context;
+        this.pages = pages;
         this.objects = objects.toArray(new OutlineLinkWrapper[objects.size()]);
         this.states = new OutlineItemState[this.objects.length];
 
@@ -149,7 +154,7 @@ public class OutlineAdapter extends BaseAdapter {
 
         final OutlineLinkWrapper item = getItem(position);
         view.setText(item.getTitleAsString().trim());
-        num.setText(String.valueOf(item.targetPage));
+        num.setText(TxtUtils.deltaPage(item.targetPage));
 
         if (item.targetPage != -1) {
             num.setVisibility(View.VISIBLE);
@@ -166,6 +171,8 @@ public class OutlineAdapter extends BaseAdapter {
         view.setTag(position);
         btn.setTag(position);
 
+        ((LinearLayout.LayoutParams) btn.getLayoutParams()).leftMargin = item.level * Dips.dpToPx(20);
+
         container.setOnClickListener(itemListener);
 
         if (states[id] == OutlineItemState.LEAF) {
@@ -179,7 +186,7 @@ public class OutlineAdapter extends BaseAdapter {
             btn.setOnClickListener(collapseListener);
 
             btn.setImageResource(states[id] == OutlineItemState.EXPANDED ? R.drawable.screen_zoom_out_dark : R.drawable.screen_zoom_in_dark);
-            TintUtil.setTintImage(btn, view.getCurrentTextColor());
+            TintUtil.setTintImageWithAlpha(btn, view.getCurrentTextColor());
             if (AppState.get().isUseTypeFace) {
                 view.setTypeface(BookCSS.getNormalTypeFace(), Typeface.BOLD);
             }

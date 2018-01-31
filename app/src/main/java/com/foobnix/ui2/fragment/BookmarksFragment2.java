@@ -11,12 +11,14 @@ import java.util.Locale;
 import org.ebookdroid.common.settings.SettingsManager;
 import org.ebookdroid.common.settings.books.BookSettings;
 
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.ResultResponse;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.pdf.info.AppSharedPreferences;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
+import com.foobnix.pdf.info.view.MyPopupMenu;
 import com.foobnix.pdf.info.widget.FileInformationDialog;
 import com.foobnix.pdf.info.wrapper.AppBookmark;
 import com.foobnix.pdf.info.wrapper.AppState;
@@ -112,7 +114,7 @@ public class BookmarksFragment2 extends UIFragment<AppBookmark> {
 
 
     private void popupMenu(final ImageView onGridList) {
-        PopupMenu p = new PopupMenu(getActivity(), onGridList);
+        MyPopupMenu p = new MyPopupMenu(getActivity(), onGridList);
         PopupHelper.addPROIcon(p, getActivity());
 
         List<Integer> names = Arrays.asList(R.string.bookmark_by_date, R.string.bookmark_by_book);
@@ -125,7 +127,7 @@ public class BookmarksFragment2 extends UIFragment<AppBookmark> {
 
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
-                    AppState.getInstance().bookmarksMode = actions.get(index);
+                    AppState.get().bookmarksMode = actions.get(index);
                     onGridList.setImageResource(icons.get(index));
                     bookmarksEditSearch.setText("");
                     bookmarksSearchContainer.setVisibility(View.GONE);
@@ -135,7 +137,6 @@ public class BookmarksFragment2 extends UIFragment<AppBookmark> {
             });
         }
         p.show();
-        PopupHelper.initIcons(p, TintUtil.color);
     }
 
     @Override
@@ -253,6 +254,7 @@ public class BookmarksFragment2 extends UIFragment<AppBookmark> {
             boolean isVisible = bookmarksSearchContainer.getVisibility() == View.VISIBLE;
             if (isVisible) {
                 bookmarksSearchContainer.setVisibility(View.GONE);
+                Keyboards.close(bookmarksEditSearch);
             } else {
                 bookmarksSearchContainer.setVisibility(View.VISIBLE);
             }
@@ -406,12 +408,12 @@ public class BookmarksFragment2 extends UIFragment<AppBookmark> {
 
     @Override
     public void notifyFragment() {
-        populate();
+
     }
 
     @Override
     public void resetFragment() {
-
+        populate();
     }
 
 }

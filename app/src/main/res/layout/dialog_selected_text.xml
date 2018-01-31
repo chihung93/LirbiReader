@@ -89,8 +89,10 @@
     </HorizontalScrollView>
 
     <LinearLayout
+        android:layout_marginTop="2dip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal" >
 
         <EditText
@@ -98,11 +100,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="3dip"
-            android:layout_marginTop="5dip"
             android:layout_weight="1"
             android:background="@color/transparent"
             android:ellipsize="end"
-            android:singleLine="true"
+            android:maxLines="2"
+            android:singleLine="false"
             android:text="Hello My World"
             android:textSize="15sp"
             android:textStyle="bold" >
@@ -110,26 +112,27 @@
 
         <ImageView
             android:id="@+id/readTTS"
-            android:padding="4dip"
             android:layout_width="@dimen/wh_button_small"
             android:layout_height="@dimen/wh_button_small"
             android:layout_weight="0"
             android:adjustViewBounds="true"
             android:background="@drawable/bg_clickable"
+            android:padding="4dip"
             android:src="@drawable/glyphicons_184_volume_down"
             android:tint="@color/tint_gray" />
 
         <ImageView
-            android:visibility="gone"
             android:id="@+id/readTTSNext"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/wh_button_small"
+            android:layout_height="@dimen/wh_button_small"
+            android:layout_marginLeft="4dip"
             android:layout_weight="0"
             android:adjustViewBounds="true"
             android:background="@drawable/bg_clickable"
-            android:padding="8dip"
+            android:padding="4dip"
             android:src="@drawable/glyphicons_177_forward"
-            android:tint="@color/tint_gray" />
+            android:tint="@color/tint_gray"
+            android:visibility="visible" />
     </LinearLayout>
 
     <TextView
@@ -181,14 +184,26 @@
         android:textSize="15sp" />
 
     <TextView
-        android:id="@+id/onTranslate"
+        android:id="@+id/onBookSearch"
+        style="@style/textLink"
         android:layout_width="match_parent"
         android:layout_height="35dip"
         android:background="@android:drawable/list_selector_background"
         android:gravity="center_vertical"
         android:paddingLeft="10dip"
         android:singleLine="true"
-         style="@style/textLink"
+        android:text="@string/search_in_document"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/onTranslate"
+        style="@style/textLink"
+        android:layout_width="match_parent"
+        android:layout_height="35dip"
+        android:background="@android:drawable/list_selector_background"
+        android:gravity="center_vertical"
+        android:paddingLeft="10dip"
+        android:singleLine="true"
         android:text="@string/web_dict"
         android:textSize="15sp" />
 

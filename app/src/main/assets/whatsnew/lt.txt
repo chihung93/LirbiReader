@@ -1,7 +1,8 @@
-* Nemokamos knygos kataloguose 
-* Pridėti katalogų nuorodas į mėgstamiausius 
-* Automatinis pertraukėlė už knygos kalbą 
-* Knygų apdovanojimų sąrašai ir viršutinių knygų sąrašai 
-* Parama asmeniniam FBReader katalogui 
-* Rodyti visas serijas pagal Autorius pagal žanrą 
-* Daugybė patobulinimų ir nedidelių pataisymų jūsų atsiliepimai
+* Patobulintas visų formatų atidarymo greitis ir PDF, EPUB 
+*Ink temos įrenginiams su elektroniniu rašalu 
+* Keisti kontrastą ir ryškumą 
+* Neigiamas ryškumas 
+* Bluelight filtras 
+* Automatinis užbaigimas užklausų bibliotekoje 
+* Patobulinta sąsaja 
+* Daugybė patobulinimų ir klaidų taisymų

@@ -15,7 +15,11 @@ import org.ebookdroid.core.codec.PageTextBox;
 import org.emdev.utils.LengthUtils;
 import org.emdev.utils.MatrixUtils;
 
+import com.artifex.mupdf.fitz.StructuredText;
+import com.artifex.mupdf.fitz.StructuredText.TextBlock;
+import com.artifex.mupdf.fitz.StructuredText.TextLine;
 import com.foobnix.android.utils.LOG;
+import com.foobnix.pdf.info.AppsConfig;
 import com.foobnix.pdf.info.model.AnnotationType;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
@@ -43,10 +47,11 @@ public class MuPdfPage extends AbstractCodecPage {
     private MuPdfPage(final long pageHandle, final long docHandle, int pageNumber) {
         this.pageHandle = pageHandle;
         this.docHandle = docHandle;
+        this.pageNumber = pageNumber;
+
         this.pageBounds = getBounds();
         this.actualWidth = (int) pageBounds.width();
         this.actualHeight = (int) pageBounds.height();
-        this.pageNumber = pageNumber;
     }
 
     @Override
@@ -108,6 +113,7 @@ public class MuPdfPage extends AbstractCodecPage {
     static MuPdfPage createPage(final long dochandle, final int pageno) {
         TempHolder.lock.lock();
         try {
+            LOG.d("MUPDF! +create page", dochandle, pageno);
             final long open = open(dochandle, pageno);
             return new MuPdfPage(open, dochandle, pageno);
         } finally {
@@ -131,6 +137,7 @@ public class MuPdfPage extends AbstractCodecPage {
             if (pageHandle != 0 && docHandle != 0) {
                 long p = pageHandle;
                 pageHandle = 0;
+                LOG.d("MUPDF! -recycle page", docHandle, pageNumber);
                 free(docHandle, p);
             }
         } catch (final Exception e) {
@@ -159,22 +166,23 @@ public class MuPdfPage extends AbstractCodecPage {
     }
 
     public BitmapRef render(final Rect viewbox, final float[] ctm) {
-        if (isRecycled()) {
-            throw new RuntimeException("The page has been recycled before: " + this);
-        }
-        final int[] mRect = new int[4];
-        mRect[0] = viewbox.left;
-        mRect[1] = viewbox.top;
-        mRect[2] = viewbox.right;
-        mRect[3] = viewbox.bottom;
-
-        final int width = viewbox.width();
-        final int height = viewbox.height();
-
-        final int[] bufferarray = new int[width * height];
-
-        TempHolder.lock.lock();
         try {
+            TempHolder.lock.lock();
+
+            if (isRecycled()) {
+                throw new RuntimeException("The page has been recycled before: " + this);
+            }
+            final int[] mRect = new int[4];
+            mRect[0] = viewbox.left;
+            mRect[1] = viewbox.top;
+            mRect[2] = viewbox.right;
+            mRect[3] = viewbox.bottom;
+
+            final int width = viewbox.width();
+            final int height = viewbox.height();
+
+            final int[] bufferarray = new int[width * height];
+
             if (TempHolder.get().isTextFormat) {
                 int color = MagicHelper.getBgColor();
                 int r = Color.red(color);
@@ -188,7 +196,7 @@ public class MuPdfPage extends AbstractCodecPage {
                     MagicHelper.udpateColorsMagic(bufferarray);
                 } else {
                     int color = MagicHelper.getBgColor();
-                    if (!AppState.get().isInvert) {
+                    if (!AppState.get().isDayNotInvert) {
                         color = ~color;
                     }
                     int r = Color.red(color);
@@ -200,15 +208,17 @@ public class MuPdfPage extends AbstractCodecPage {
             } else {
                 renderPage(docHandle, pageHandle, mRect, ctm, bufferarray, -1, -1, -1);
             }
+
+            if (MagicHelper.isNeedBC) {
+                MagicHelper.applyQuickContrastAndBrightness(bufferarray, width, height);
+            }
+
+            final BitmapRef b = BitmapManager.getBitmap("PDF page", width, height, Config.RGB_565);
+            b.getBitmap().setPixels(bufferarray, 0, width, 0, 0, width, height);
+            return b;
         } finally {
             TempHolder.lock.unlock();
         }
-
-        MagicHelper.applyQuickContrastAndBrightness(bufferarray);
-
-        final BitmapRef b = BitmapManager.getBitmap("PDF page", width, height, Config.RGB_565);
-        b.getBitmap().setPixels(bufferarray, 0, width, 0, 0, width, height);
-        return b;
     }
 
     @Override
@@ -221,7 +231,19 @@ public class MuPdfPage extends AbstractCodecPage {
         }
     }
 
+    @Override
+    public int getCharCount() {
+        try {
+            TempHolder.lock.lock();
+            return getCharCount(docHandle, pageHandle);
+        } finally {
+            TempHolder.lock.unlock();
+        }
+    }
+
     private static native void getBounds(long dochandle, long handle, float[] bounds);
+
+    private static native int getCharCount(long dochandle, long handle);
 
     private static native void free(long dochandle, long handle);
 
@@ -231,8 +253,6 @@ public class MuPdfPage extends AbstractCodecPage {
 
     private static native boolean renderPageBitmap(long dochandle, long pagehandle, int[] viewboxarray, float[] matrixarray, Bitmap bitmap);
 
-    private native static List<PageTextBox> search(long docHandle, long pageHandle, String pattern);
-
     private native static TextChar[][][][] text(long docHandle, long pageHandle);
 
     private native void addInkAnnotationInternal(long docHandle, long pageHandle, float[] color, PointF[][] arcs, int width, float alpha);
@@ -241,7 +261,7 @@ public class MuPdfPage extends AbstractCodecPage {
 
     private native void addMarkupAnnotationInternal(long docHandle, long pageHandle, PointF[] quadPoints, int type, float color[]);
 
-    private native byte[] getPageAsHtml(long docHandle, long pageHandle);
+    private native byte[] getPageAsHtml(long docHandle, long pageHandle, int opts);
 
     @Override
     public String getPageHTML() {
@@ -249,7 +269,27 @@ public class MuPdfPage extends AbstractCodecPage {
 
         try {
             TempHolder.lock.lock();
-            byte[] pageAsHtml = getPageAsHtml(docHandle, pageHandle);
+            byte[] pageAsHtml = getPageAsHtml(docHandle, pageHandle, -1);
+            String string = new String(pageAsHtml);
+            return string;
+        } catch (Exception e) {
+            LOG.e(e);
+            return "";
+        } finally {
+            TempHolder.lock.unlock();
+        }
+    }
+
+    @Override
+    public String getPageHTMLWithImages() {
+        LOG.d("getPageAsHtml");
+
+        try {
+            TempHolder.lock.lock();
+            // FZ_STEXT_PRESERVE_LIGATURES = 1,
+            // FZ_STEXT_PRESERVE_WHITESPACE = 2,
+            // FZ_STEXT_PRESERVE_IMAGES = 4,
+            byte[] pageAsHtml = getPageAsHtml(docHandle, pageHandle, 4);
             String string = new String(pageAsHtml);
             return string;
         } catch (Exception e) {
@@ -321,6 +361,15 @@ public class MuPdfPage extends AbstractCodecPage {
 
     @Override
     public synchronized TextWord[][] getText() {
+        if (AppsConfig.MUPDF == 112) {
+            return getText_112();
+        } else {
+            return getText_111();
+        }
+
+    }
+
+    public synchronized TextWord[][] getText_111() {
         TextChar[][][][] chars = text();
         if (chars == null) {
             return new TextWord[0][0];
@@ -375,6 +424,65 @@ public class MuPdfPage extends AbstractCodecPage {
         return res;
     }
 
+    public synchronized TextWord[][] getText_112() {
+        // LOG.d("getText()", docHandle, pageHandle, pageNumber);
+        TextBlock[] blocks = null;
+        try {
+            TempHolder.lock.lock();
+            blocks = StructuredText.getBlocks(docHandle, pageHandle);
+        } finally {
+            TempHolder.lock.unlock();
+        }
+
+        ArrayList<TextWord[]> lns = new ArrayList<TextWord[]>();
+
+        for (TextBlock block : blocks) {
+            ArrayList<TextWord> words = new ArrayList<TextWord>();
+            for (TextLine line : block.lines) {
+
+                TextWord word = new TextWord();
+                for (StructuredText.TextChar ch : line.chars) {
+                    char chChar = (char) ch.c;
+
+                    if (AppState.get().selectingByLetters) {
+                        if (chChar == SPACE_CHAR) {
+                            chChar = ' ';
+                        }
+                        word.addChar(ch.bbox, chChar);
+                        words.add(word);
+                        word = new TextWord();
+                        continue;
+                    }
+
+                    if (chChar == ' ') {
+                        words.add(word);
+                        // LOG.d("getText()", word.w);
+                        word = new TextWord();
+                        continue;
+                    }
+                    word.addChar(ch.bbox, chChar);
+                }
+                if (word.w.length() > 0) {
+                    words.add(word);
+                    // LOG.d("getText()", word.w);
+                    word = new TextWord();
+                }
+            }
+            if (words.size() > 0) {
+                lns.add(words.toArray(new TextWord[words.size()]));
+            }
+        }
+
+        TextWord[][] res = lns.toArray(new TextWord[lns.size()][]);
+        for (TextWord[] lines : res) {
+            for (TextWord word : lines) {
+                update(word);
+            }
+        }
+        return res;
+
+    }
+
     public void update(TextWord wd) {
         wd.setOriginal(wd);
         update((RectF) wd);
@@ -385,13 +493,6 @@ public class MuPdfPage extends AbstractCodecPage {
         wd.top = (wd.top - pageBounds.top) / pageBounds.height();
         wd.right = (wd.right - pageBounds.left) / pageBounds.width();
         wd.bottom = (wd.bottom - pageBounds.top) / pageBounds.height();
-    }
-
-    @Override
-    public List<? extends RectF> searchText(final String pattern) {
-        final List<PageTextBox> rects = search(docHandle, pageHandle, pattern);
-        udpateSearchResult(rects);
-        return rects;
     }
 
     private void udpateSearchResult(final List<PageTextBox> rects) {

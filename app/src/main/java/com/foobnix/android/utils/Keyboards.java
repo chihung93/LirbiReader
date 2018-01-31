@@ -1,6 +1,7 @@
 package com.foobnix.android.utils;
 
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.ui2.MainTabs2;
 
 import android.app.Activity;
 import android.content.Context;
@@ -24,13 +25,18 @@ public class Keyboards {
 
     public static void close(View currentFocus) {
         InputMethodManager inputManager = (InputMethodManager) currentFocus.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputManager.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, 0);
+        // inputManager.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, 0);
         inputManager.hideSoftInputFromWindow(currentFocus.getWindowToken(), 0);
     }
 
     public static void hideNavigation(final Activity a) {
         try {
-            if (!AppState.get().isFullScreen) {
+            if (a == null) {
+                return;
+            }
+            if (a instanceof MainTabs2 && !AppState.get().isFullScreenMain) {
+                return;
+            } else if (!AppState.get().isFullScreen) {
                 return;
             }
 

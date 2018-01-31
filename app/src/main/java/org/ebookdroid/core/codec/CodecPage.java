@@ -27,10 +27,6 @@ public interface CodecPage {
 
 	List<Annotation> getAnnotations();
 
-	List<PageTextBox> getPageText();
-
-	List<? extends RectF> searchText(final String pattern);
-
 	public TextWord[][] getText();
 
 	void recycle();
@@ -44,5 +40,9 @@ public interface CodecPage {
 	void addMarkupAnnotation(PointF[] quadPoints, AnnotationType type, float[] color);
 
     String getPageHTML();
+
+    String getPageHTMLWithImages();
+
+    int getCharCount();
 
 }

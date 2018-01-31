@@ -7,14 +7,19 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="2dip" >
-        
+        android:orientation="vertical" >
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal" >
+
+            <View
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:background="@color/lt_grey_alpha" />
 
             <TextView
                 android:id="@+id/moreSettings"
@@ -22,7 +27,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:gravity="center"
+                android:lines="2"
+                android:singleLine="false"
                 android:text="@string/reading_settings" />
+
+            <View
+                android:id="@+id/moreSettingsDiv"
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:background="@color/lt_grey_alpha" />
 
             <TextView
                 android:id="@+id/performanceSettigns"
@@ -30,7 +45,16 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:gravity="center"
+                android:lines="2"
+                android:singleLine="false"
                 android:text="@string/advanced_settings" />
+
+            <View
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:background="@color/lt_grey_alpha" />
 
             <TextView
                 android:id="@+id/statusBarSettings"
@@ -38,15 +62,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:gravity="center"
+                android:lines="2"
+                android:singleLine="false"
                 android:text="@string/status_bar" />
+
+            <View
+                android:layout_width="1dip"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:background="@color/lt_grey_alpha" />
         </LinearLayout>
 
         <View
-            android:id="@+id/topPanelLineDiv"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginBottom="1dip"
-            android:layout_marginTop="1dip"
             android:background="@color/lt_grey_alpha" />
 
         <LinearLayout
@@ -54,7 +85,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal" >
+            android:orientation="horizontal"
+            android:visibility="gone" >
 
             <ImageView
                 android:id="@+id/onRecent"
@@ -92,7 +124,8 @@
                 android:contentDescription="@string/preferences"
                 android:padding="8dip"
                 android:src="@drawable/glyphicons_166_iphone_exchange"
-                android:tint="@color/tint_gray" />
+                android:tint="@color/tint_gray"
+                android:visibility="gone" />
 
             <ImageView
                 android:id="@+id/onRotate"
@@ -104,7 +137,8 @@
                 android:contentDescription="@string/recent"
                 android:padding="8dip"
                 android:src="@drawable/glyphicons_241_rotation_lock_my"
-                android:tint="@color/tint_gray" />
+                android:tint="@color/tint_gray"
+                android:visibility="gone" />
 
             <ImageView
                 android:id="@+id/onBrightness"
@@ -127,7 +161,8 @@
                 android:background="@drawable/bg_border_ltgray"
                 android:padding="8dip"
                 android:src="@drawable/glyphicons_94_crop"
-                android:tint="@color/tint_gray" />
+                android:tint="@color/tint_gray"
+                android:visibility="gone" />
 
             <ImageView
                 android:id="@+id/onFullScreen"
@@ -161,21 +196,22 @@
                 android:background="@drawable/bg_border_ltgray"
                 android:padding="8dip"
                 android:src="@drawable/glyphicons_336_pushpin"
-                android:tint="@color/tint_gray" />
+                android:tint="@color/tint_gray"
+                android:visibility="gone" />
         </LinearLayout>
 
         <CheckBox
             android:id="@+id/isPreText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/plain_text_txt_preformatted"
+            android:text="@string/formatted_text"
             android:visibility="gone" />
 
         <CheckBox
             android:id="@+id/isLineBreaksText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/text_without_line_break"
+            android:text="@string/continuous_text"
             android:visibility="gone" />
 
         <LinearLayout
@@ -218,7 +254,7 @@
 
         <LinearLayout
             android:id="@+id/fontNameSelectionLayout"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal" >
@@ -241,14 +277,16 @@
                 android:singleLine="true"
                 android:text="@string/font_name"
                 android:textStyle="bold" />
-
-            <Spinner
-                android:id="@+id/spinnerFontName"
-                android:layout_width="match_parent"
-                android:layout_height="40dip"
-                android:layout_marginRight="4dip"
+            
+            <TextView
+                android:id="@+id/textFontName"
+                style="@style/textLink"
+                android:textSize="16sp"
                 android:layout_weight="1"
-                android:minWidth="300dp" />
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TimesNewRoman" />
+
 
             <ImageView
                 android:id="@+id/moreFontSettings"
@@ -262,39 +300,8 @@
                 android:tint="@color/tint_gray" />
         </LinearLayout>
 
-        
-        <LinearLayout
-            android:gravity="center_vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" >
-
-            <CheckBox
-                android:layout_weight="1"
-                android:id="@+id/isAutoHypens"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/automatic_hyphenation" />
-            
-            
-            <TextView
-                 android:id="@+id/hypenLangLabel"
-                android:layout_weight="0"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="15dip"
-                android:text="@string/language" />
-
-            <TextView
-                android:layout_weight="0"
-                android:id="@+id/hypenLang"
-                style="@style/textLink"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="50dip"
-                android:text="Russian" />
-        </LinearLayout>
-
         <View
+            android:id="@+id/topPanelLineDiv"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="2dip"
@@ -322,11 +329,26 @@
                 android:layout_weight="1"
                 android:orientation="vertical" >
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/brightness"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/brightness"
+                        android:textStyle="bold" />
+
+                    <CheckBox
+                        android:id="@+id/autoSettings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:layout_weight="0"
+                        android:text="@string/automatic" />
+                </LinearLayout>
 
                 <com.foobnix.pdf.info.view.CustomSeek
                     android:id="@+id/customBrightness"
@@ -335,14 +357,6 @@
                     android:layout_weight="1" >
                 </com.foobnix.pdf.info.view.CustomSeek>
             </LinearLayout>
-
-            <CheckBox
-                android:id="@+id/autoSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:layout_weight="0"
-                android:text="" />
         </LinearLayout>
 
         <LinearLayout
@@ -489,153 +503,184 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
-        <View
+        <LinearLayout
+            android:id="@+id/allBGConfig"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginBottom="1dip"
-            android:layout_marginTop="1dip"
-            android:background="@color/lt_grey_alpha" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dip"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" >
+            android:orientation="vertical" >
 
-            <RelativeLayout
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="1dip"
+                android:layout_marginTop="1dip"
+                android:background="@color/lt_grey_alpha" />
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dip"
-                android:background="@drawable/bg_border_ltgray" >
+                android:gravity="center_vertical"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/isEnableBlueFilter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_weight="0"
+                    android:text="" />
 
                 <TextView
-                    android:id="@+id/onDayColor"
-                    android:layout_width="80dip"
-                    android:layout_height="@dimen/wh_button"
-                    android:background="#FFFFFF"
-                    android:gravity="center"
-                    android:paddingLeft="10dip"
-                    android:text="@string/day"
-                    android:textColor="#000000"
-                    android:textStyle="bold" />
+                    android:id="@+id/onBlueFilter"
+                    style="@style/textLink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="4dip"
+                    android:text="@string/bluelight_filter" />
+            </LinearLayout>
 
-                <ImageView
-                    android:id="@+id/onDayColorImage"
-                    android:layout_width="@dimen/wh_button"
-                    android:layout_height="@dimen/wh_button"
-                    android:padding="10dip"
-                    android:src="@drawable/glyphicons_232_sun"
-                    android:tint="#000000" />
-            </RelativeLayout>
-
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dip"
-                android:background="@drawable/bg_border_ltgray" >
+                android:gravity="center_vertical"
+                android:orientation="horizontal" >
+
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="4dip"
+                    android:background="@drawable/bg_border_ltgray" >
+
+                    <TextView
+                        android:id="@+id/onDayColor"
+                        android:layout_width="90dip"
+                        android:layout_height="@dimen/wh_button"
+                        android:background="#FFFFFF"
+                        android:gravity="center"
+                        android:paddingLeft="25dip"
+                        android:text="@string/day"
+                        android:textColor="#000000"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/onDayColorImage"
+                        android:layout_width="@dimen/wh_button"
+                        android:layout_height="@dimen/wh_button"
+                        android:padding="10dip"
+                        android:src="@drawable/glyphicons_232_sun"
+                        android:tint="#000000" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="4dip"
+                    android:background="@drawable/bg_border_ltgray" >
+
+                    <TextView
+                        android:id="@+id/onNigthColor"
+                        android:layout_width="90dip"
+                        android:layout_height="@dimen/wh_button"
+                        android:background="#000000"
+                        android:gravity="center"
+                        android:paddingLeft="25dip"
+                        android:text="@string/nigth"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/onNigthColorImage"
+                        android:layout_width="@dimen/wh_button"
+                        android:layout_height="@dimen/wh_button"
+                        android:padding="10dip"
+                        android:src="@drawable/glyphicons_2_moon"
+                        android:tint="#ffffff" />
+                </RelativeLayout>
+
+                <ImageView
+                    android:id="@+id/moreReadColorSettings"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:layout_alignParentRight="true"
+                    android:layout_marginLeft="4dip"
+                    android:layout_weight="0"
+                    android:background="@drawable/bg_border_ltgray"
+                    android:padding="8dip"
+                    android:src="@drawable/glyphicons_685_article"
+                    android:tint="@color/tint_gray" />
 
                 <TextView
-                    android:id="@+id/onNigthColor"
-                    android:layout_width="80dip"
-                    android:layout_height="@dimen/wh_button"
-                    android:background="#000000"
-                    android:gravity="center"
-                    android:paddingLeft="10dip"
-                    android:text="@string/nigth"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold" />
+                    android:id="@+id/onDefaultColor"
+                    style="@style/textLink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0"
+                    android:maxLines="2"
+                    android:singleLine="false"
+                    android:text="@string/restore_defaults_short" />
+            </LinearLayout>
 
-                <ImageView
-                    android:id="@+id/onNigthColorImage"
-                    android:layout_width="@dimen/wh_button"
-                    android:layout_height="@dimen/wh_button"
-                    android:padding="10dip"
-                    android:src="@drawable/glyphicons_2_moon"
-                    android:tint="#ffffff" />
-            </RelativeLayout>
-
-            <ImageView
-                android:id="@+id/moreReadColorSettings"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:layout_alignParentRight="true"
-                android:layout_marginLeft="4dip"
-                android:layout_weight="0"
-                android:background="@drawable/bg_border_ltgray"
-                android:padding="8dip"
-                android:src="@drawable/glyphicons_685_article"
-                android:tint="@color/tint_gray" />
-
-            <TextView
-                android:id="@+id/onDefaultColor"
-                style="@style/textLink"
+            <LinearLayout
+                android:id="@+id/preColors"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:text="@string/restore_defaults" />
-        </LinearLayout>
+                android:layout_marginTop="3dip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="2dip" >
 
-        <LinearLayout
-            android:id="@+id/preColors"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dip"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="2dip" >
+                <TextView
+                    android:id="@+id/t1"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:gravity="center"
+                    android:text=" 1 "
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/t1"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:gravity="center"
-                android:text=" 1 "
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/t2"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:layout_marginLeft="2dip"
+                    android:gravity="center"
+                    android:text=" 2 "
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/t2"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:layout_marginLeft="2dip"
-                android:gravity="center"
-                android:text=" 2 "
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/t3"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:layout_marginLeft="2dip"
+                    android:gravity="center"
+                    android:text=" 3 "
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/t3"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:layout_marginLeft="2dip"
-                android:gravity="center"
-                android:text=" 3 "
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/ta"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:gravity="center"
+                    android:text=" A "
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/ta"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:gravity="center"
-                android:text=" A "
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tb"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:layout_marginLeft="2dip"
+                    android:gravity="center"
+                    android:text=" B "
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tb"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:layout_marginLeft="2dip"
-                android:gravity="center"
-                android:text=" B "
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tc"
-                android:layout_width="@dimen/wh_button"
-                android:layout_height="@dimen/wh_button"
-                android:layout_marginLeft="2dip"
-                android:gravity="center"
-                android:text=" C "
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tc"
+                    android:layout_width="@dimen/wh_button"
+                    android:layout_height="@dimen/wh_button"
+                    android:layout_marginLeft="2dip"
+                    android:gravity="center"
+                    android:text=" C "
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

@@ -3,8 +3,11 @@
  */
 package com.foobnix.android.utils;
 
+import java.util.Locale;
+
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.os.Build;
@@ -12,6 +15,10 @@ import android.view.Display;
 import android.view.WindowManager;
 
 public class Dips {
+
+    public final static int DP_5 = Dips.dpToPx(5);
+    public final static int DP_10 = Dips.dpToPx(10);
+
     private static WindowManager wm;
     static Context context;
 
@@ -51,12 +58,17 @@ public class Dips {
         final WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         final Display display = wm.getDefaultDisplay();
         float refreshRate = display.getRefreshRate();
-        LOG.d("getRefreshRate", refreshRate);
+        LOG.d("RefreshRate", refreshRate);
         return refreshRate;
     }
 
     public static boolean isEInk(Context context) {
-        return getRefreshRate(context) < 10.0;
+        boolean isEink = getRefreshRate(context) < 30.0;
+        String brand = Build.BRAND.toLowerCase(Locale.US);
+        if (!isEink && (brand.contains("onyx") || brand.contains("icarus") || brand.contains("yota") || brand.contains("nook"))) {
+            return true;
+        }
+        return isEink;
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
@@ -97,6 +109,19 @@ public class Dips {
 
     public static boolean isHorizontal() {
         return screenWidth() > screenHeight();
+    }
+
+    public static boolean isXLargeScreen() {
+        int size = Resources.getSystem().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK;
+        // return size == Configuration.SCREENLAYOUT_SIZE_LARGE || size ==
+        // Configuration.SCREENLAYOUT_SIZE_XLARGE;
+        return size == Configuration.SCREENLAYOUT_SIZE_XLARGE;
+
+    }
+
+    public static boolean isLargeOrXLargeScreen() {
+        int size = Resources.getSystem().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK;
+        return size == Configuration.SCREENLAYOUT_SIZE_LARGE || size == Configuration.SCREENLAYOUT_SIZE_XLARGE;
     }
 
 }

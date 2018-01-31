@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.dao2.FileMeta;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.ext.EbookMeta;
 import com.foobnix.pdf.info.AppSharedPreferences;
 import com.foobnix.pdf.info.ExtUtils;
@@ -26,12 +27,21 @@ import android.support.v4.media.session.MediaSessionCompat;
 public class BooksService extends IntentService {
     private MediaSessionCompat mediaSessionCompat;
 
+
     public BooksService() {
         super("BooksService");
         AppState.get().load(this);
         handler = new Handler();
-
+        LOG.d("BooksService", "Create");
     }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        LOG.d("BooksService", "onDestroy");
+    }
+
+    public static String TAG = "BooksService";
 
     Handler handler;
 
@@ -45,129 +55,142 @@ public class BooksService extends IntentService {
 
     private List<FileMeta> itemsMeta = new LinkedList<FileMeta>();
 
+
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent == null) {
             return;
         }
-        LOG.d("BooksService", "Action", intent.getAction());
+        try {
+            LOG.d(TAG, "BooksService", "Action", intent.getAction());
 
-        if (ACTION_REMOVE_DELETED.equals(intent.getAction())) {
-            List<FileMeta> list = AppDB.get().getAll();
-            for (FileMeta meta : list) {
-                File bookFile = new File(meta.getPath());
-                if (!bookFile.exists()) {
-                    AppDB.get().delete(meta);
-                    LOG.d("Delete meta", meta.getPath());
+            if (ACTION_REMOVE_DELETED.equals(intent.getAction())) {
+                List<FileMeta> list = AppDB.get().getAll();
+                for (FileMeta meta : list) {
+                    File bookFile = new File(meta.getPath());
+                    if (!bookFile.exists()) {
+                        AppDB.get().delete(meta);
+                        LOG.d(TAG, "Delete meta", meta.getPath());
+                    }
                 }
-            }
-            sendFinishMessage();
+                sendFinishMessage();
 
-            LOG.d("BooksService , searchDate", AppState.get().searchDate);
-            if (AppState.get().searchDate != 0) {
+                LOG.d("BooksService , searchDate", AppState.get().searchDate);
+                if (AppState.get().searchDate != 0) {
 
-                List<FileMeta> localMeta = new LinkedList<FileMeta>();
+                    List<FileMeta> localMeta = new LinkedList<FileMeta>();
+
+                    for (final String path : AppState.get().searchPaths.split(",")) {
+                        if (path != null && path.trim().length() > 0) {
+                            final File root = new File(path);
+                            if (root.isDirectory()) {
+                                LOG.d(TAG, "Searcin in " + root.getPath());
+                                SearchCore.search(localMeta, root, ExtUtils.seachExts);
+                            }
+                        }
+                    }
+
+                    for (FileMeta meta : localMeta) {
+
+                        File file = new File(meta.getPath());
+                        if (file.lastModified() >= AppState.get().searchDate) {
+                            if (AppDB.get().getDao().hasKey(meta)) {
+                                LOG.d(TAG, "Skip book", file.getPath());
+                                continue;
+                            }
+
+                            FileMetaCore.get().upadteBasicMeta(meta, file);
+                            EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(meta.getPath(), CacheDir.ZipService, true);
+                            FileMetaCore.get().udpateFullMeta(meta, ebookMeta);
+
+                            meta.setIsSearchBook(true);
+                            AppDB.get().updateOrSave(meta);
+                            LOG.d(TAG, "BooksService", "insert", meta.getPath());
+                        }
+
+                    }
+                    AppState.get().searchDate = System.currentTimeMillis();
+                    sendFinishMessage();
+                }
+
+            } else if (ACTION_SEARCH_ALL.equals(intent.getAction())) {
+                LOG.d(ACTION_SEARCH_ALL);
+
+                IMG.clearDiscCache();
+                IMG.clearMemoryCache();
+                ImageExtractor.clearErrors();
+
+                List<Uri> recent = AppSharedPreferences.get().getRecent();
+                List<FileMeta> starsAndRecent = AppDB.get().deleteAllSafe();
+
+                long time = Integer.MAX_VALUE;
+                for (Uri uri : recent) {
+                    FileMeta item = new FileMeta(uri.getPath());
+                    item.setIsRecent(true);
+                    item.setIsStarTime(time--);
+                    starsAndRecent.add(item);
+                }
+                for (FileMeta m : starsAndRecent) {
+                    if (m.getCusType() != null && FileMetaAdapter.DISPLAY_TYPE_DIRECTORY == m.getCusType()) {
+                        m.setIsSearchBook(false);
+                    } else {
+                        m.setIsSearchBook(true);
+                    }
+                }
+
+                AppSharedPreferences.get().cleanRecent();
+
+                itemsMeta.clear();
+
+                handler.post(timer);
 
                 for (final String path : AppState.get().searchPaths.split(",")) {
                     if (path != null && path.trim().length() > 0) {
                         final File root = new File(path);
                         if (root.isDirectory()) {
                             LOG.d("Searcin in " + root.getPath());
-                            SearchCore.search(localMeta, root, ExtUtils.seachExts);
+                            SearchCore.search(itemsMeta, root, ExtUtils.seachExts);
                         }
                     }
                 }
-
-
-                for (FileMeta meta : localMeta) {
-                    File file = new File(meta.getPath());
-                    if (file.lastModified() >= AppState.get().searchDate) {
-                        FileMetaCore.get().upadteBasicMeta(meta, file);
-                        EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(meta.getPath());
-                        FileMetaCore.get().udpateFullMeta(meta, ebookMeta);
-
-                        meta.setIsSearchBook(true);
-                        AppDB.get().updateOrSave(meta);
-                        LOG.d("BooksService", "insert", meta.getPath());
-                    }
-                }
                 AppState.get().searchDate = System.currentTimeMillis();
+
+                for (FileMeta meta : itemsMeta) {
+                    meta.setIsSearchBook(true);
+                }
+
+                itemsMeta.addAll(starsAndRecent);
+                AppDB.get().saveAll(itemsMeta);
+
+                handler.removeCallbacks(timer);
+
                 sendFinishMessage();
-            }
 
-        } else if (ACTION_SEARCH_ALL.equals(intent.getAction())) {
-            LOG.d(ACTION_SEARCH_ALL);
+                handler.post(timer2);
 
-            IMG.clearDiscCache();
-            IMG.clearMemoryCache();
-            ImageExtractor.clearErrors();
-
-            List<Uri> recent = AppSharedPreferences.get().getRecent();
-            List<FileMeta> starsAndRecent = AppDB.get().deleteAllSafe();
-
-            long time = Integer.MAX_VALUE;
-            for (Uri uri : recent) {
-                FileMeta item = new FileMeta(uri.getPath());
-                item.setIsRecent(true);
-                item.setIsStarTime(time--);
-                starsAndRecent.add(item);
-            }
-            for (FileMeta m : starsAndRecent) {
-                if (m.getCusType() != null && FileMetaAdapter.DISPLAY_TYPE_DIRECTORY == m.getCusType()) {
-                    m.setIsSearchBook(false);
-                } else {
-                    m.setIsSearchBook(true);
+                for (FileMeta meta : itemsMeta) {
+                    File file = new File(meta.getPath());
+                    FileMetaCore.get().upadteBasicMeta(meta, file);
                 }
-            }
 
-            AppSharedPreferences.get().cleanRecent();
+                AppDB.get().updateAll(itemsMeta);
 
-            itemsMeta.clear();
-
-            handler.post(timer);
-
-            for (final String path : AppState.get().searchPaths.split(",")) {
-                if (path != null && path.trim().length() > 0) {
-                    final File root = new File(path);
-                    if (root.isDirectory()) {
-                        LOG.d("Searcin in " + root.getPath());
-                        SearchCore.search(itemsMeta, root, ExtUtils.seachExts);
-                    }
+                for (FileMeta meta : itemsMeta) {
+                    EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(meta.getPath(), CacheDir.ZipService, true);
+                    LOG.d("BooksService getAuthor", meta.getPath(), ebookMeta.getAuthor());
+                    FileMetaCore.get().udpateFullMeta(meta, ebookMeta);
                 }
-            }
-            AppState.get().searchDate = System.currentTimeMillis();
 
-            for (FileMeta meta : itemsMeta) {
-                meta.setIsSearchBook(true);
-            }
+                AppDB.get().updateAll(itemsMeta);
 
-            itemsMeta.addAll(starsAndRecent);
-            AppDB.get().saveAll(itemsMeta);
+                itemsMeta.clear();
 
-            handler.removeCallbacks(timer);
-
-            sendFinishMessage();
-
-            handler.post(timer2);
-
-            for (FileMeta meta : itemsMeta) {
-                File file = new File(meta.getPath());
-                FileMetaCore.get().upadteBasicMeta(meta, file);
+                handler.removeCallbacks(timer2);
+                sendFinishMessage();
+                CacheDir.ZipService.removeCacheContent();
             }
 
-            AppDB.get().updateAll(itemsMeta);
-
-            for (FileMeta meta : itemsMeta) {
-                EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(meta.getPath());
-                FileMetaCore.get().udpateFullMeta(meta, ebookMeta);
-            }
-
-            AppDB.get().updateAll(itemsMeta);
-
-            itemsMeta.clear();
-
-            handler.removeCallbacks(timer2);
-            sendFinishMessage();
+        } finally {
         }
 
     }
@@ -193,6 +216,7 @@ public class BooksService extends IntentService {
     private void sendFinishMessage() {
         sendFinishMessage(this);
     }
+
     public static void sendFinishMessage(Context c) {
         Intent intent = new Intent(INTENT_NAME).putExtra(Intent.EXTRA_TEXT, RESULT_SEARCH_FINISH);
         LocalBroadcastManager.getInstance(c).sendBroadcast(intent);

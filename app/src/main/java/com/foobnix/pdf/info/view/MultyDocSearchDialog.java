@@ -13,11 +13,13 @@ import org.ebookdroid.core.codec.CodecPage;
 import org.ebookdroid.droids.mupdf.codec.TextWord;
 
 import com.foobnix.android.utils.BaseItemLayoutAdapter;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse2;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.ext.CacheZipUtils;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.io.SearchCore;
@@ -57,9 +59,9 @@ public class MultyDocSearchDialog {
         public String text;
         public volatile boolean isSearcingRun = false;
 
-        public String currentDoc;
-        public int currentPage;
-        public int currentPagesCount;
+        public volatile String currentDoc;
+        public volatile int currentPage;
+        public volatile int currentPagesCount;
 
         public List<Pair<String, Integer>> res = new ArrayList<Pair<String, Integer>>();
 
@@ -86,6 +88,8 @@ public class MultyDocSearchDialog {
 
     public static View getDialogView(final FragmentActivity c) {
         View inflate = LayoutInflater.from(c).inflate(R.layout.dialog_multy_search, null, false);
+
+        inflate.setKeepScreenOn(true);
 
         final EditText editPath = (EditText) inflate.findViewById(R.id.editPath);
         final Button buttonPath = (Button) inflate.findViewById(R.id.buttonPath);
@@ -167,6 +171,10 @@ public class MultyDocSearchDialog {
                     Toast.makeText(c, R.string.incorrect_value, Toast.LENGTH_SHORT).show();
                     return;
                 }
+                if (Model.get().text.contains(" ")) {
+                    Toast.makeText(c, R.string.you_can_search_only_one_word, Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 if (Model.get().isSearcingRun) {
                     Toast.makeText(c, R.string.searching_please_wait_, Toast.LENGTH_SHORT).show();
@@ -179,6 +187,9 @@ public class MultyDocSearchDialog {
 
                 Model.get().res.clear();
                 adapter.notifyDataSetChanged();
+
+                Keyboards.close(editSearchText);
+
             }
         });
 
@@ -279,6 +290,15 @@ public class MultyDocSearchDialog {
             }
             updater2.sendEmptyMessage(0);
             Model.get().isSearcingRun = false;
+
+            a.runOnUiThread(new Runnable() {
+
+                @Override
+                public void run() {
+                    infoView1.setText(R.string.search_completed);
+                }
+            });
+
             return null;
         }
 
@@ -291,13 +311,15 @@ public class MultyDocSearchDialog {
             CodecDocument openDocument = null;
             CacheZipUtils.cacheLock.lock();
             try {
-                String zipPath = CacheZipUtils.extracIfNeed(path).unZipPath;
+                String zipPath = CacheZipUtils.extracIfNeed(path, CacheDir.ZipApp).unZipPath;
                 openDocument = ctx.openDocument(zipPath, "");
+                LOG.d("searchInThePDF", openDocument, zipPath);
             } finally {
                 CacheZipUtils.cacheLock.unlock();
             }
 
             if (!Model.get().isSearcingRun) {
+                openDocument.recycle();
                 ctx.recycle();
                 return -1;
             }
@@ -306,25 +328,50 @@ public class MultyDocSearchDialog {
             Model.get().currentPagesCount = pageCount;
             Model.get().currentDoc = new File(path).getName();
 
+            LOG.d("searchInThePDF", "pageCount", Model.get().currentPagesCount, Model.get().currentDoc);
+            int emptyCount = 0;
             for (int i = 0; i < pageCount; i++) {
                 if (!Model.get().isSearcingRun) {
+                    openDocument.recycle();
                     ctx.recycle();
                     return -1;
                 }
                 CodecPage page = openDocument.getPage(i);
-                List<TextWord> findText = Page.findText(text, page.getText());
+
+                TextWord[][] textPage = page.getText();
+                LOG.d("searchInThePDF", "getText", textPage != null ? textPage.length : "null");
+                if (textPage == null || textPage.length <= 1) {
+                    emptyCount++;
+                    if (emptyCount >= 5) {
+                        LOG.d("searchInThePDF", "Page is empty", emptyCount);
+
+                        break;
+                    }
+                }
+
+                List<TextWord> findText = Page.findText(text, textPage);
                 page.recycle();
+                page = null;
 
                 Model.get().currentPage = i;
                 update1.sendEmptyMessage(0);
 
                 if (!findText.isEmpty()) {
+                    openDocument.recycle();
                     ctx.recycle();
+                    findText = null;
+                    openDocument = null;
+                    ctx = null;
                     return i;
                 }
-            }
+                findText = null;
 
+            }
+            openDocument.recycle();
             ctx.recycle();
+            openDocument = null;
+            ctx = null;
+            System.gc();
         } catch (Exception e) {
             LOG.e(e);
         }

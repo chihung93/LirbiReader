@@ -4,8 +4,14 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.foobnix.pdf.info.TintUtil;
+import com.foobnix.pdf.reader.R;
+
 import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
 import android.text.Html;
+import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -14,11 +20,81 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.LinearLayout.LayoutParams;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.PopupWindow;
+import android.widget.PopupWindow.OnDismissListener;
 import android.widget.TextView;
 
 public class Views {
+
+    public static void visible(final View... views) {
+        for (View v : views) {
+            v.setVisibility(View.VISIBLE);
+        }
+
+    }
+
+    public static void gone(final View... views) {
+        for (View v : views) {
+            v.setVisibility(View.GONE);
+        }
+    }
+
+    public static void showHelpToast(final ImageView anchor) {
+        try {
+            showHelpToastUnsafe(anchor);
+        } catch (Exception e) {
+            LOG.e(e);
+        }
+
+    }
+
+    private static void showHelpToastUnsafe(final ImageView anchor) {
+        Context context = anchor.getContext();
+        TextView textView = new TextView(context);
+        textView.setGravity(Gravity.CENTER);
+        textView.setTextColor(Color.WHITE);
+        // textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        textView.setTextSize(16);
+        textView.setBackgroundResource(R.drawable.bg_my_toast);
+        textView.setText(anchor.getContentDescription());
+        textView.setFocusable(true);
+        textView.setFocusableInTouchMode(true);
+
+        TintUtil.setDrawableTint(anchor.getDrawable(), Color.YELLOW);
+
+        // TintUtil.setDrawableTint(anchor.getDrawable(), Color.WHITE);
+
+        textView.setCompoundDrawablesWithIntrinsicBounds(anchor.getDrawable(), null, null, null);
+        int dp = Dips.dpToPx(8);
+        textView.setCompoundDrawablePadding(dp * 2);
+        textView.setPadding(dp * 2, dp, dp * 2, dp);
+
+        final PopupWindow mPopupWindow = new PopupWindow(textView, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        mPopupWindow.setFocusable(true);
+        mPopupWindow.showAsDropDown(anchor, 0, -Dips.dpToPx(180));
+
+        mPopupWindow.setOnDismissListener(new OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                TintUtil.setTintImageNoAlpha(anchor, Color.WHITE);
+            }
+        });
+
+        textView.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                mPopupWindow.dismiss();
+            }
+        });
+
+        Keyboards.hideNavigation((Activity) anchor.getContext());
+
+    }
 
     public static View activate(View view, boolean isActive) {
         view.setFocusable(isActive);

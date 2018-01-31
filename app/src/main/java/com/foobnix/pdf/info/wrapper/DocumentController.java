@@ -12,16 +12,18 @@ import org.ebookdroid.core.codec.PageLink;
 import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
+import com.foobnix.android.utils.Safe;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.IMG;
+import com.foobnix.pdf.info.MyADSProvider;
 import com.foobnix.pdf.info.OutlineHelper;
 import com.foobnix.pdf.info.PageUrl;
+import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.model.AnnotationType;
 import com.foobnix.pdf.info.model.OutlineLinkWrapper;
 import com.foobnix.pdf.info.view.AlertDialogs;
-import com.foobnix.pdf.reader.R;
 import com.foobnix.sys.ImageExtractor;
 import com.foobnix.tts.TTSEngine;
 import com.foobnix.ui2.AppDB;
@@ -35,7 +37,6 @@ import android.graphics.PointF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
-import android.provider.Settings.SettingNotFoundException;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -45,10 +46,25 @@ import android.widget.Toast;
 @SuppressLint("NewApi")
 public abstract class DocumentController {
 
-    public static List<Integer> ROTATIONS = Arrays.asList(//
+    public final static List<Integer> orientationIds = Arrays.asList(//
             ActivityInfo.SCREEN_ORIENTATION_SENSOR, //
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, //
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, //
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, //
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT//
+    );
+
+    public final static List<Integer> orientationTexts = Arrays.asList(//
+            R.string.automatic, //
+            R.string.landscape, //
+            R.string.portrait, //
+            R.string.landscape_180, //
+            R.string.portrait_180////
+    );
+
+    public static int getRotationText() {
+        return orientationTexts.get(orientationIds.indexOf(AppState.get().orientation));
+    }
 
     protected final Activity activity;
     private DocumentWrapperUI ui;
@@ -94,7 +110,9 @@ public abstract class DocumentController {
 
     public abstract void onZoomInOut(int x, int y);
 
-    public abstract void onCloseActivity();
+    public abstract void onCloseActivityAdnShowInterstial();
+
+    public abstract void onCloseActivityFinal(Runnable run);
 
     public abstract void onNightMode();
 
@@ -120,7 +138,7 @@ public abstract class DocumentController {
 
     public abstract void underlineText(int color, float width, AnnotationType type);
 
-    public abstract void getOutline(ResultResponse<List<OutlineLinkWrapper>> outline);
+    public abstract void getOutline(ResultResponse<List<OutlineLinkWrapper>> outline, boolean forse);
 
     public abstract String getFootNote(String text);
 
@@ -130,8 +148,16 @@ public abstract class DocumentController {
 
     public abstract void saveAnnotationsToFile();
 
+    public abstract int getBookWidth();
+
+    public abstract int getBookHeight();
+
     public void saveSettings() {
 
+    }
+
+    public MyADSProvider getAdsProvider() {
+        return null;
     }
 
     public void updateRendering() {
@@ -142,7 +168,7 @@ public abstract class DocumentController {
 
     public void checkReadingTimer() {
         long timeout = System.currentTimeMillis() - readTimeStart;
-        if (timeout >= TimeUnit.MINUTES.toMillis(AppState.get().remindRestTime)) {
+        if (AppState.get().remindRestTime != -1 && timeout >= TimeUnit.MINUTES.toMillis(AppState.get().remindRestTime)) {
             AlertDialogs.showOkDialog(activity, getString(R.string.remind_msg), new Runnable() {
 
                 @Override
@@ -154,7 +180,7 @@ public abstract class DocumentController {
     }
 
     public boolean isEasyMode() {
-        return AppState.getInstance().isAlwaysOpenAsMagazine;
+        return AppState.get().isAlwaysOpenAsMagazine;
     }
 
     public void onResume() {
@@ -163,7 +189,7 @@ public abstract class DocumentController {
 
     public Bitmap getBookImage() {
         String url = IMG.toUrl(getCurrentBook().getPath(), ImageExtractor.COVER_PAGE_WITH_EFFECT, IMG.getImageSize());
-        return ImageLoader.getInstance().loadImageSync(url, IMG.displayImageOptions);
+        return ImageLoader.getInstance().loadImageSync(url, IMG.displayCacheMemoryDisc);
     }
 
     public FileMeta getBookFileMeta() {
@@ -185,7 +211,7 @@ public abstract class DocumentController {
                 }
                 return false;
             }
-        });
+        }, false);
     }
 
     List<OutlineLinkWrapper> outline;
@@ -287,58 +313,29 @@ public abstract class DocumentController {
     }
 
     private static void applyTheme(final Activity a) {
-        if (AppState.getInstance().isWhiteTheme) {
+        if (AppState.get().isWhiteTheme) {
             a.setTheme(R.style.StyledIndicatorsWhite);
         } else {
             a.setTheme(R.style.StyledIndicatorsBlack);
         }
     }
 
-    public static void applyBrigtness(final Activity a) {
-        try {
-            float brightness = AppState.getInstance().brightness;
-            final WindowManager.LayoutParams lp = a.getWindow().getAttributes();
-            if (brightness < 0) {
-                brightness = -1;
-            }
-            lp.screenBrightness = brightness;
-            a.getWindow().setAttributes(lp);
-        } catch (Exception e) {
-            LOG.e(e);
-        }
-    }
-
-    public static float getSystemBrigtness(final Activity a) {
-        try {
-            final int brightInt = android.provider.Settings.System.getInt(a.getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS);
-            return (float) brightInt / 255;
-        } catch (final SettingNotFoundException e) {
-            e.printStackTrace();
-        }
-        return 0.5f;
-    }
-
-    public static void nextRotation() {
-        final int type = AppState.getInstance().orientation;
-        if (type == ROTATIONS.get(0)) {
-            AppState.getInstance().orientation = ROTATIONS.get(1);
-        }
-
-        else if (type == ROTATIONS.get(1)) {
-            AppState.getInstance().orientation = ROTATIONS.get(2);
-        }
-
-        else if (type == ROTATIONS.get(2)) {
-            AppState.getInstance().orientation = ROTATIONS.get(0);
-        }
-    }
 
     public void restartActivity() {
+
         IMG.clearMemoryCache();
         saveAppState();
         TTSEngine.get().stop();
-        activity.finish();
-        activity.startActivity(activity.getIntent());
+
+        Safe.run(new Runnable() {
+
+            @Override
+            public void run() {
+                ImageExtractor.clearCodeDocument();
+                activity.finish();
+                activity.startActivity(activity.getIntent());
+            }
+        });
     }
 
     public void saveAppState() {
@@ -347,7 +344,7 @@ public abstract class DocumentController {
 
     public static void doRotation(final Activity a) {
         try {
-            a.setRequestedOrientation(AppState.getInstance().orientation);
+            a.setRequestedOrientation(AppState.get().orientation);
         } catch (Exception e) {
             LOG.e(e);
         }
@@ -492,5 +489,9 @@ public abstract class DocumentController {
     public abstract void alignDocument();
 
     public abstract void centerHorizontal();
+
+    public void recyclePage(int page) {
+
+    }
 
 }

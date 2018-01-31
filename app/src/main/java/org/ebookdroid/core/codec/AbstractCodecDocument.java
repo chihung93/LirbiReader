@@ -1,9 +1,10 @@
 package org.ebookdroid.core.codec;
 
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import com.foobnix.sys.TempHolder;
 
 import android.graphics.Bitmap;
 
@@ -16,6 +17,18 @@ public abstract class AbstractCodecDocument implements CodecDocument {
     protected AbstractCodecDocument(final CodecContext context, long documentHandle) {
         this.context = context;
         this.documentHandle = documentHandle;
+    }
+
+    @Override
+    public long getDocumentHandle() {
+        return documentHandle;
+    }
+
+
+    @Override
+    public CodecPage getPage(int pageNuber) {
+        CodecPage pageInner = getPageInner(pageNuber);
+        return pageInner;
     }
 
     @Override
@@ -46,9 +59,15 @@ public abstract class AbstractCodecDocument implements CodecDocument {
 
     @Override
     public final void recycle() {
-        if (!isRecycled()) {
-            context.recycle();
-            freeDocument();
+        try {
+            TempHolder.lock.lock();
+            TempHolder.get().lastRecycledDocument = documentHandle;
+            if (!isRecycled()) {
+                context.recycle();
+                freeDocument();
+            }
+        } finally {
+            TempHolder.lock.unlock();
         }
     }
 
@@ -62,6 +81,16 @@ public abstract class AbstractCodecDocument implements CodecDocument {
 
     @Override
     public Bitmap getEmbeddedThumbnail() {
+        return null;
+    }
+
+    @Override
+    public String getBookAuthor() {
+        return null;
+    }
+
+    @Override
+    public String getBookTitle() {
         return null;
     }
 

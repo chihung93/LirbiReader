@@ -53,7 +53,7 @@
         <LinearLayout
             android:id="@+id/layoutBootom"
             android:layout_width="match_parent"
-            android:layout_height="80dip"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="2dip" >
 
@@ -61,7 +61,6 @@
                 android:id="@+id/title1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dip"
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:gravity="top"
@@ -91,34 +90,32 @@
                 android:orientation="horizontal" >
 
                 <TextView
-                    android:id="@+id/idPercentText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="2dip"
-                    android:layout_weight="0"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:layout_marginLeft="4dip"
-                    android:text="20%"
-                    android:textSize="@dimen/text_subtitle" />
-
-                <TextView
                     android:id="@+id/browserExt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="2dip"
-                    android:layout_marginLeft="4dip"
                     android:layout_marginRight="2dip"
+                    android:layout_marginLeft="1dip"
                     android:layout_weight="0"
                     android:singleLine="true"
                     android:text="PDF"
                     android:textAllCaps="true"
                     android:textSize="@dimen/text_subtitle"
                     android:textStyle="bold" />
-               
-                 <TextView     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:layout_weight="1"/>
                 
+                <TextView
+                    android:id="@+id/idPercentText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="2dip"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                     android:layout_weight="1"
+                    android:layout_marginLeft="2dip"
+                    android:text="20%"
+                     android:textStyle="italic"
+                    android:textSize="@dimen/text_subtitle" />
+               
                
                 <TextView
                     android:id="@+id/browserPath"

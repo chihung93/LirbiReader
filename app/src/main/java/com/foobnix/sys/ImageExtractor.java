@@ -12,6 +12,7 @@ import org.ebookdroid.common.bitmaps.BitmapRef;
 import org.ebookdroid.common.bitmaps.RawBitmap;
 import org.ebookdroid.core.codec.CodecContext;
 import org.ebookdroid.core.codec.CodecDocument;
+import org.ebookdroid.core.codec.CodecPage;
 import org.ebookdroid.core.codec.CodecPageInfo;
 import org.ebookdroid.core.crop.PageCropper;
 import org.ebookdroid.droids.mupdf.codec.exceptions.MuPdfPasswordException;
@@ -19,8 +20,10 @@ import org.ebookdroid.droids.mupdf.codec.exceptions.MuPdfPasswordException;
 import com.BaseExtractor;
 import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
+import com.foobnix.android.utils.Safe;
+import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
-import com.foobnix.ext.CacheZipUtils;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.ext.CbzCbrExtractor;
 import com.foobnix.ext.EbookMeta;
 import com.foobnix.ext.EpubExtractor;
@@ -33,6 +36,7 @@ import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.info.PageUrl;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
+import com.foobnix.pdf.search.activity.PageImageState;
 import com.foobnix.ui2.AppDB;
 import com.foobnix.ui2.FileMetaCore;
 import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
@@ -56,13 +60,10 @@ public class ImageExtractor implements ImageDownloader {
     public static final int COVER_PAGE_WITH_EFFECT = -3;
     public static final int COVER_PAGE_NO_EFFECT = -2;
     public static final int COVER_PAGE = -1;
-    private static final int FIRST_PAGE = 0;
     private static ImageExtractor instance;
     private final BaseImageDownloader baseImage;
     private final Context c;
 
-    CodecDocument codeCache;
-    String pathCache;
     public static SharedPreferences sp;
 
     public static synchronized ImageExtractor getInstance(final Context c) {
@@ -91,12 +92,10 @@ public class ImageExtractor implements ImageDownloader {
         }
 
         FileMeta fileMeta = AppDB.get().getOrCreate(path);
-        EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(path);
+        EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(path, CacheDir.ZipApp, false);
 
         FileMetaCore.get().upadteBasicMeta(fileMeta, new File(path));
         FileMetaCore.get().udpateFullMeta(fileMeta, ebookMeta);
-
-        AppDB.get().update(fileMeta);
 
         String unZipPath = ebookMeta.getUnzipPath();
 
@@ -113,7 +112,7 @@ public class ImageExtractor implements ImageDownloader {
         } else if (BookType.RTF.is(unZipPath)) {
             cover = BaseExtractor.arrayToBitmap(RtfExtract.getImageCover(unZipPath), pageUrl.getWidth());
         } else if (BookType.PDF.is(unZipPath) || BookType.DJVU.is(unZipPath) || BookType.TIFF.is(unZipPath)) {
-            cover = proccessOtherPage(pageUrl);
+            cover = proccessOtherPage(pageUrl, fileMeta);
         } else if (BookType.CBZ.is(unZipPath) || BookType.CBR.is(unZipPath)) {
             cover = BaseExtractor.arrayToBitmap(CbzCbrExtractor.getBookCover(unZipPath), pageUrl.getWidth());
         } else if (ExtUtils.isFileArchive(unZipPath)) {
@@ -126,9 +125,12 @@ public class ImageExtractor implements ImageDownloader {
         }
 
         if (cover == null) {
-            cover = BaseExtractor.getBookCoverWithTitle(ebookMeta.getAuthor(), ebookMeta.getTitle(), true);
+            cover = BaseExtractor.getBookCoverWithTitle(fileMeta.getAuthor(), fileMeta.getTitle(), true);
             pageUrl.tempWithWatermakr = true;
         }
+
+        LOG.d("udpateFullMeta ImageExtractor", fileMeta.getAuthor());
+        AppDB.get().update(fileMeta);
 
         return cover;
     }
@@ -138,7 +140,7 @@ public class ImageExtractor implements ImageDownloader {
             LOG.d("generalCoverWithEffect", pageUrl.getWidth(), cover.getWidth(), " --- ", pageUrl.getHeight(), cover.getHeight());
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             Bitmap res;
-            if (AppState.getInstance().isBookCoverEffect || pageUrl.getPage() == COVER_PAGE_WITH_EFFECT) {
+            if (AppState.get().isBookCoverEffect || pageUrl.getPage() == COVER_PAGE_WITH_EFFECT) {
                 res = MagicHelper.scaleCenterCrop(cover, pageUrl.getHeight(), pageUrl.getWidth(), !pageUrl.tempWithWatermakr);
                 res.compress(CompressFormat.PNG, 90, out);
             } else {
@@ -161,7 +163,7 @@ public class ImageExtractor implements ImageDownloader {
         }
     }
 
-    public Bitmap proccessOtherPage(PageUrl pageUrl) {
+    public Bitmap proccessOtherPage(PageUrl pageUrl, FileMeta meta) {
         int page = pageUrl.getPage();
         String path = pageUrl.getPath();
 
@@ -177,29 +179,30 @@ public class ImageExtractor implements ImageDownloader {
             // isNeedDisableMagicInPDFDjvu = true;
         }
 
-        CodecDocument codecDocumentLocal = null;
-
-        LOG.d("PdfImage", "TempHolder.path", path);
-
-        if (path.equals(TempHolder.get().path) && TempHolder.get().codecDocument != null) {
-            codecDocumentLocal = TempHolder.get().codecDocument;
-            LOG.d("PdfImage", "TempHolder.path");
-        } else if (path.equals(pathCache) && codeCache != null && !codeCache.isRecycled()) {
-            codecDocumentLocal = codeCache;
-            LOG.d("PdfImage", "Local cache");
-        } else {
-            codecDocumentLocal = getCodecContext(path, "", pageUrl.getWidth(), pageUrl.getHeight());
-
-            if (codecDocumentLocal == null) {
-                LOG.d("TEST", "codecDocument == null " + path);
-                return null;
+        CodecDocument codeCache = null;
+        if (isNeedDisableMagicInPDFDjvu) {
+            codeCache = singleCodecContext(path, "", pageUrl.getWidth(), pageUrl.getHeight());
+            if (meta != null && codeCache != null && FileMetaCore.isNeedToExtractPDFMeta(path)) {
+                String bookAuthor = codeCache.getBookAuthor();
+                if (TxtUtils.isNotEmpty(bookAuthor)) {
+                    meta.setAuthor(bookAuthor);
+                }
+                String bookTitle = codeCache.getBookTitle();
+                if (TxtUtils.isNotEmpty(bookTitle)) {
+                    meta.setTitle(bookTitle);
+                }
+                LOG.d("PDF getBookAuthor", bookAuthor, bookTitle);
             }
-            codeCache = codecDocumentLocal;
-            pathCache = path;
-            LOG.d("PdfImage", "new codec");
+        } else {
+            codeCache = getNewCodecContext(path, "", pageUrl.getWidth(), pageUrl.getHeight());
         }
 
-        final CodecPageInfo pageInfo = codecDocumentLocal.getPageInfo(page);
+        if (codeCache == null) {
+            LOG.d("TEST", "codecDocument == null" + path);
+            return null;
+        }
+
+        final CodecPageInfo pageInfo = codeCache.getPageInfo(page);
 
         Bitmap bitmap = null;
 
@@ -212,13 +215,15 @@ public class ImageExtractor implements ImageDownloader {
         LOG.d("Bitmap pageInfo.height", pageInfo.width, pageInfo.height);
 
         BitmapRef bitmapRef = null;
+        CodecPage pageCodec = codeCache.getPage(page);
+
         if (pageUrl.getNumber() == 0) {
             rectF = new RectF(0, 0, 1f, 1f);
             if (isNeedDisableMagicInPDFDjvu) {
                 MagicHelper.isNeedMagic = false;
             }
 
-            bitmapRef = codecDocumentLocal.getPage(page).renderBitmap(width, height, rectF);
+            bitmapRef = pageCodec.renderBitmap(width, height, rectF);
 
             if (isNeedDisableMagicInPDFDjvu) {
                 MagicHelper.isNeedMagic = true;
@@ -234,7 +239,7 @@ public class ImageExtractor implements ImageDownloader {
         } else if (pageUrl.getNumber() == 1) {
             float right = (float) pageUrl.getCutp() / 100;
             rectF = new RectF(0, 0, right, 1f);
-            bitmapRef = codecDocumentLocal.getPage(page).renderBitmap((int) (width * right), height, rectF);
+            bitmapRef = pageCodec.renderBitmap((int) (width * right), height, rectF);
             bitmap = bitmapRef.getBitmap();
 
             if (pageUrl.isCrop()) {
@@ -244,7 +249,7 @@ public class ImageExtractor implements ImageDownloader {
         } else if (pageUrl.getNumber() == 2) {
             float right = (float) pageUrl.getCutp() / 100;
             rectF = new RectF(right, 0, 1f, 1f);
-            bitmapRef = codecDocumentLocal.getPage(page).renderBitmap((int) (width * (1 - right)), height, rectF);
+            bitmapRef = pageCodec.renderBitmap((int) (width * (1 - right)), height, rectF);
             bitmap = bitmapRef.getBitmap();
 
             if (pageUrl.isCrop()) {
@@ -267,7 +272,17 @@ public class ImageExtractor implements ImageDownloader {
             bitmap = bitmap1;
         }
 
-        codecDocumentLocal.getPage(page).recycle();
+        if (pageUrl.isDoText() && !pageCodec.isRecycled()) {
+            PageImageState.get().pagesText.put(pageUrl.getPage(), pageCodec.getText());
+            PageImageState.get().pagesLinks.put(pageUrl.getPage(), pageCodec.getPageLinks());
+        }
+
+        if (!pageCodec.isRecycled()) {
+            pageCodec.recycle();
+        }
+        if (isNeedDisableMagicInPDFDjvu) {
+            codeCache.recycle();
+        }
 
         if (!isNeedDisableMagicInPDFDjvu && MagicHelper.isNeedBookBackgroundImage()) {
             bitmap = MagicHelper.updateWithBackground(bitmap);
@@ -288,6 +303,7 @@ public class ImageExtractor implements ImageDownloader {
         return bitmap1;
     }
 
+    @Deprecated
     public Pair<Bitmap, RectF> getCroppedPage(CodecDocument codecDocumentLocal, int page, Bitmap bitmap) {
         RectF rectF = new RectF(0, 0, 1f, 1f);
         final Rect rootRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
@@ -306,8 +322,24 @@ public class ImageExtractor implements ImageDownloader {
 
     @Override
     public synchronized InputStream getStream(final String imageUri, final Object extra) throws IOException {
+        try {
+            return getStreamInner(imageUri);
+        } finally {
+        }
+    }
+
+    public synchronized InputStream getStreamInner(final String imageUri) throws IOException {
         LOG.d("TEST", "url: " + imageUri);
 
+        if (imageUri.startsWith(Safe.TXT_SAFE_RUN)) {
+            LOG.d("MUPDF!", Safe.TXT_SAFE_RUN, "begin", imageUri);
+            // try {
+            // Thread.sleep(1500);
+            // } catch (InterruptedException e) {
+            // e.printStackTrace();
+            // }
+            return baseImage.getStream("assets://opds/web.png", null);
+        }
         if (imageUri.startsWith("https")) {
 
             Request request = new Request.Builder()//
@@ -330,7 +362,7 @@ public class ImageExtractor implements ImageDownloader {
         }
 
         if (!imageUri.startsWith("{")) {
-            return baseImage.getStream(imageUri, extra);
+            return baseImage.getStream(imageUri, null);
         }
         if (sp.contains("" + imageUri.hashCode())) {
             LOG.d("Error FILE", imageUri);
@@ -342,13 +374,6 @@ public class ImageExtractor implements ImageDownloader {
 
         File file = new File(path);
         try {
-
-            // if (ExtUtils.isTiffFile(file)) {
-            // FileMeta fileMeta = AppDB.get().getOrCreate(path);
-            // FileMetaCore.get().upadteBasicMeta(fileMeta, new File(path));
-            // AppDB.get().update(fileMeta);
-            // return bitmapToStream(proccessOtherPage(pageUrl));
-            // }
 
             if (ExtUtils.isImageFile(file)) {
                 FileMeta fileMeta = AppDB.get().getOrCreate(path);
@@ -377,10 +402,16 @@ public class ImageExtractor implements ImageDownloader {
             }
 
             if (page == COVER_PAGE || page == COVER_PAGE_WITH_EFFECT) {
-                Bitmap proccessCoverPage = proccessCoverPage(pageUrl);
-                return generalCoverWithEffect(pageUrl, proccessCoverPage);
+                try {
+                    MagicHelper.isNeedBC = false;
+                    Bitmap proccessCoverPage = proccessCoverPage(pageUrl);
+                    return generalCoverWithEffect(pageUrl, proccessCoverPage);
+                } finally {
+                    MagicHelper.isNeedBC = true;
+                }
             } else if (page == COVER_PAGE_NO_EFFECT) {
-                return bitmapToStream(proccessCoverPage(pageUrl));
+                ByteArrayInputStream bitmapToStream = bitmapToStream(proccessCoverPage(pageUrl));
+                return bitmapToStream;
             } else {
                 if (pageUrl.isDouble()) {
                     LOG.d("isDouble", pageUrl.getHeight(), pageUrl.getWidth());
@@ -388,12 +419,12 @@ public class ImageExtractor implements ImageDownloader {
                         pageUrl.setPage(pageUrl.getPage() - 1);
                     }
 
-                    Bitmap bitmap1 = proccessOtherPage(pageUrl);
+                    Bitmap bitmap1 = proccessOtherPage(pageUrl, null);
                     pageUrl.setPage(pageUrl.getPage() + 1);
 
                     Bitmap bitmap2 = null;
                     if (pageUrl.getPage() < pageCount) {
-                        bitmap2 = proccessOtherPage(pageUrl);
+                        bitmap2 = proccessOtherPage(pageUrl, null);
                     } else {
                         bitmap2 = Bitmap.createBitmap(bitmap1);
                         Canvas canvas = new Canvas(bitmap2);
@@ -419,7 +450,7 @@ public class ImageExtractor implements ImageDownloader {
 
                 }
 
-                return bitmapToStreamRAW(proccessOtherPage(pageUrl));
+                return bitmapToStreamRAW(proccessOtherPage(pageUrl, null));
             }
 
         } catch (MuPdfPasswordException e) {
@@ -428,7 +459,7 @@ public class ImageExtractor implements ImageDownloader {
             LOG.e(e);
             return messageFile("#error", "");
         } catch (OutOfMemoryError e2) {
-            AppState.outOfMemoryHack();
+            AppState.get().pagesInMemory = 1;
             return messageFile("#error", "");
         } finally {
             sp.edit().remove("" + imageUri.hashCode()).commit();
@@ -471,36 +502,104 @@ public class ImageExtractor implements ImageDownloader {
 
     static int pageCount = 0;
 
-    public static CodecDocument getCodecContext(final String path, String passw, int w, int h) {
-        if (path.equals(TempHolder.get().path) && TempHolder.get().codecDocument != null) {
-            return TempHolder.get().codecDocument;
+    public static volatile CodecDocument codeCache;
+    public static volatile CodecContext codecContex;
+    public static String pathCache;
+    static int whCache;
+
+    public static synchronized void clearCodeDocument() {
+        if (codeCache != null) {
+            codeCache.recycle();
+            codeCache = null;
+            pathCache = null;
+            LOG.d("getNewCodecContext codeCache recycle");
         }
-        LOG.d("getCodecContext before", w, h);
+        if (codecContex != null) {
+            codecContex.recycle();
+            codecContex = null;
+            LOG.d("getNewCodecContext codecContex recycle");
+        }
+
+        TempHolder.get().clear();
+
+    }
+
+    public static void init(CodecDocument codec, String path) {
+        clearCodeDocument();
+        codeCache = codec;
+        pathCache = path;
+    }
+
+    public static synchronized CodecDocument singleCodecContext(final String path, String passw, int w, int h) {
+        try {
+            CodecContext codecContex = BookType.getCodecContextByPath(path);
+            TempHolder.get().init(path);
+
+            LOG.d("CodecContext", codecContex);
+
+            if (codecContex == null) {
+                return null;
+            }
+
+            TempHolder.get().loadingCancelled = false;
+            return codecContex.openDocument(path, passw);
+        } catch (RuntimeException e) {
+            LOG.e(e);
+            return null;
+        }
+    }
+
+    public static synchronized CodecDocument getNewCodecContext(final String path, String passw, int w, int h) {
+
+        if (path.equals(pathCache) /* && whCache == h + w */ && codeCache != null && !codeCache.isRecycled()) {
+            LOG.d("getNewCodecContext cache", path, w, h);
+            return codeCache;
+        }
+        LOG.d("getNewCodecContext new", path, w, h);
+
+        clearCodeDocument();
+
+        pageCount = 0;
+        pathCache = null;
+        codeCache = null;
+        whCache = -1;
+
         if (w <= 0 || h <= 0) {
             w = Dips.screenWidth();
             h = Dips.screenHeight();
         }
-        LOG.d("getCodecContext after", w, h);
+        LOG.d("getNewCodecContext after", w, h);
 
-        CodecContext ctx = BookType.getCodecContextByPath(path);
+        codecContex = BookType.getCodecContextByPath(path);
+        TempHolder.get().init(path);
 
-        if (ctx == null) {
+        LOG.d("CodecContext", codecContex);
+
+        if (codecContex == null) {
             return null;
         }
-        CodecDocument openDocument = null;
-        CacheZipUtils.cacheLock.lock();
-        try {
-            String zipPath = CacheZipUtils.extracIfNeed(path).unZipPath;
-            LOG.d("getCodecContext", zipPath);
-            openDocument = ctx.openDocument(zipPath, passw);
-        } finally {
-            CacheZipUtils.cacheLock.unlock();
+
+        // CacheZipUtils.cacheLock.lock();
+        // try {
+        // String zipPath = CacheZipUtils.extracIfNeed(path, CacheDir.ZipApp).unZipPath;
+        // LOG.d("getCodecContext", zipPath);
+        // codeCache = ctx.openDocument(zipPath, passw);
+        // } finally {
+        // CacheZipUtils.cacheLock.unlock();
+        // }
+
+        TempHolder.get().loadingCancelled = false;
+        codeCache = codecContex.openDocument(path, passw);
+        if (codeCache == null) {
+            LOG.d("[Open doc is null 1", path);
+            return null;
         }
 
-        pageCount = openDocument.getPageCount(w, h, AppState.get().fontSizeSp);
+        pageCount = codeCache.getPageCount(w, h, AppState.get().fontSizeSp);
+        pathCache = path;
+        whCache = h + w;
+        return codeCache;
 
-        TempHolder.get().init(openDocument, path);
-        return openDocument;
     }
 
     private InputStream messageFile(String msg, String name) {

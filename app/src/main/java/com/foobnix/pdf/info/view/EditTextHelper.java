@@ -11,15 +11,14 @@ import android.widget.TextView.OnEditorActionListener;
 public class EditTextHelper {
 
     public static void enableKeyboardSearch(final EditText searchEdit, final Runnable action) {
-        searchEdit.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        searchEdit.setImeOptions(EditorInfo.IME_ACTION_DONE);
         searchEdit.setOnEditorActionListener(new OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     action.run();
-                    return true;
                 }
-                return false;
+                return true;
             }
         });
 
@@ -27,12 +26,14 @@ public class EditTextHelper {
 
             @Override
             public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if (keyCode == KeyEvent.KEYCODE_ENTER) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER)) {
                     action.run();
                     return true;
+
                 }
                 return false;
             }
         });
+
     }
 }

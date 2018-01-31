@@ -3,7 +3,7 @@ package com.foobnix.pdf.info.widget;
 import java.io.File;
 import java.util.Arrays;
 
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
@@ -35,12 +35,16 @@ public class RecentUpates {
             return;
         }
 
-        LOG.d("RecentUpates", "update widgets");
+        LOG.d("RecentUpates", "MUPDF!", c.getClass());
+        try {
 
-        {
-            Intent intent = new Intent(c, RecentBooksWidget.class);
-            intent.setAction("android.appwidget.action.APPWIDGET_UPDATE");
-            c.sendBroadcast(intent);
+            {
+                Intent intent = new Intent(c, RecentBooksWidget.class);
+                intent.setAction("android.appwidget.action.APPWIDGET_UPDATE");
+                c.sendBroadcast(intent);
+            }
+        } catch (Exception e) {
+            LOG.e(e);
         }
 
         if (Build.VERSION.SDK_INT >= 25) {
@@ -48,11 +52,11 @@ public class RecentUpates {
                 FileMeta recentLast = AppDB.get().getRecentLast();
                 if (recentLast != null) {
                     ShortcutManager shortcutManager = c.getSystemService(ShortcutManager.class);
-                    String url = IMG.toUrl(recentLast.getPath(), ImageExtractor.COVER_PAGE_WITH_EFFECT, IMG.getImageSize());
-                    Bitmap image = ImageLoader.getInstance().loadImageSync(url, IMG.displayImageOptions);
+                    String url = IMG.toUrl(recentLast.getPath(), ImageExtractor.COVER_PAGE, IMG.getImageSize());
+                    Bitmap image = ImageLoader.getInstance().loadImageSync(url, IMG.displayCacheMemoryDisc);
 
-                    Intent lastBookIntent = new Intent(c, ViewerActivity.class);
-                    if (AppState.getInstance().isAlwaysOpenAsMagazine) {
+                    Intent lastBookIntent = new Intent(c, VerticalViewActivity.class);
+                    if (AppState.get().isAlwaysOpenAsMagazine) {
                         lastBookIntent = new Intent(c, HorizontalViewActivity.class);
                     }
                     lastBookIntent.setAction(Intent.ACTION_VIEW);
@@ -77,6 +81,7 @@ public class RecentUpates {
                             .build();//
 
                     shortcutManager.setDynamicShortcuts(Arrays.asList(tts, shortcut));
+                    // shortcutManager.setDynamicShortcuts(Arrays.asList(shortcut));
                 }
             } catch (Exception e) {
                 LOG.e(e);

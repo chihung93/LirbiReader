@@ -5,26 +5,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
+import com.foobnix.android.utils.Apps;
+import com.foobnix.android.utils.Dips;
 import com.foobnix.android.utils.LOG;
+import com.foobnix.android.utils.Safe;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.pdf.SlidingTabLayout;
-import com.foobnix.pdf.info.ADS;
-import com.foobnix.pdf.info.Analytics;
 import com.foobnix.pdf.info.Android6;
 import com.foobnix.pdf.info.AndroidWhatsNew;
-import com.foobnix.pdf.info.AppsConfig;
+import com.foobnix.pdf.info.ExportSettingsManager;
 import com.foobnix.pdf.info.FontExtractor;
+import com.foobnix.pdf.info.PasswordDialog;
 import com.foobnix.pdf.reader.R;
 import com.foobnix.pdf.info.TintUtil;
+import com.foobnix.pdf.info.view.BrightnessHelper;
 import com.foobnix.pdf.info.widget.RecentBooksWidget;
 import com.foobnix.pdf.info.widget.RecentUpates;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.DocumentController;
 import com.foobnix.pdf.info.wrapper.UITab;
 import com.foobnix.pdf.search.activity.HorizontalViewActivity;
+import com.foobnix.pdf.search.activity.msg.MessegeBrightness;
+import com.foobnix.pdf.search.activity.msg.MsgCloseMainTabs;
 import com.foobnix.pdf.search.view.CloseAppDialog;
 import com.foobnix.sys.TempHolder;
 import com.foobnix.ui2.adapter.TabsAdapter2;
@@ -35,9 +43,7 @@ import com.foobnix.ui2.fragment.PrefFragment2;
 import com.foobnix.ui2.fragment.RecentFragment2;
 import com.foobnix.ui2.fragment.SearchFragment2;
 import com.foobnix.ui2.fragment.UIFragment;
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.InterstitialAd;
-import com.google.android.gms.ads.NativeExpressAdView;
+import com.nostra13.universalimageloader.core.ImageLoader;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -50,7 +56,6 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
@@ -60,33 +65,39 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 @SuppressLint("NewApi")
-public class MainTabs2 extends FragmentActivity {
+public class MainTabs2 extends AdsFragmentActivity {
+    private static final String TAG = "MainTabs";
     public static final String EXTRA_EXIT = "EXTRA_EXIT";
     public static final String EXTRA_SHOW_TABS = "EXTRA_SHOW_TABS";
     public static String EXTRA_PAGE_NUMBER = "EXTRA_PAGE_NUMBER";
     public static String EXTRA_SEACH_TEXT = "EXTRA_SEACH_TEXT";
     ViewPager pager;
     List<UIFragment> tabFragments;
-    private NativeExpressAdView adViewNative;
-    InterstitialAd mInterstitialAd;
-    public static volatile boolean isInStack;
+
     TabsAdapter2 adapter;
 
     ImageView imageMenu;
-    View imageMenuParent;
+    View imageMenuParent, overlay;
+    TextView toastBrightnessText;
+
+    public boolean isEink = false;
 
     @Override
     protected void onNewIntent(final Intent intent) {
-        isInStack = true;
-        testIntentHandler();
+        LOG.d(TAG, "onNewIntent");
+        // testIntentHandler();
         if (intent.getBooleanExtra(EXTRA_EXIT, false)) {
             finish();
+            return;
         }
         checkGoToPage(intent);
+
     }
 
     public void testIntentHandler() {
@@ -130,14 +141,30 @@ public class MainTabs2 extends FragmentActivity {
     }
 
     @Override
+    protected void attachBaseContext(Context context) {
+        if (AppState.MY_SYSTEM_LANG.equals(AppState.get().appLang) && AppState.get().appFontScale == 1.0f) {
+            LOG.d("attachBaseContext skip");
+            super.attachBaseContext(context);
+        } else {
+            LOG.d("attachBaseContext apply");
+            super.attachBaseContext(MyContextWrapper.wrap(context));
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (AppState.getInstance().isWhiteTheme) {
+        if (AppState.get().isWhiteTheme) {
             setTheme(R.style.StyledIndicatorsWhite);
         } else {
             setTheme(R.style.StyledIndicatorsBlack);
         }
         super.onCreate(savedInstanceState);
-        // test
+
+        if (PasswordDialog.isNeedPasswordDialog(this)) {
+            return;
+        }
+
+        LOG.d(TAG, "onCreate");
 
         LOG.d("EXTRA_EXIT", EXTRA_EXIT);
         if (getIntent().getBooleanExtra(EXTRA_EXIT, false)) {
@@ -145,36 +172,22 @@ public class MainTabs2 extends FragmentActivity {
             return;
         }
 
-        isInStack = true;
+        isEink = Dips.isEInk(this);
 
         TintUtil.setStatusBarColor(this);
-        DocumentController.applyBrigtness(this);
         DocumentController.doRotation(this);
 
         setContentView(R.layout.main_tabs);
 
-        if (!AppsConfig.checkIsProInstalled(this) && AppsConfig.ADMOB_FULLSCREEN != null) {
-            mInterstitialAd = new InterstitialAd(this);
-            mInterstitialAd.setAdUnitId(AppsConfig.ADMOB_FULLSCREEN);
-            mInterstitialAd.setAdListener(new AdListener() {
-                @Override
-                public void onAdClosed() {
-                    finish();
-                }
-            });
-
-            try {
-                mInterstitialAd.loadAd(ADS.adRequest);
-            } catch (Exception e) {
-                LOG.e(e);
-            }
-        }
-
         imageMenu = (ImageView) findViewById(R.id.imageMenu1);
         imageMenuParent = findViewById(R.id.imageParent1);
-        if (imageMenuParent != null) {
-            imageMenuParent.setBackgroundColor(TintUtil.color);
-        }
+        imageMenuParent.setBackgroundColor(TintUtil.color);
+
+        overlay = findViewById(R.id.overlay);
+
+        toastBrightnessText = (TextView) findViewById(R.id.toastBrightnessText);
+        toastBrightnessText.setVisibility(View.GONE);
+        TintUtil.setDrawableTint(toastBrightnessText.getCompoundDrawables()[0], Color.WHITE);
 
         tabFragments = new ArrayList<UIFragment>();
 
@@ -203,9 +216,9 @@ public class MainTabs2 extends FragmentActivity {
             @Override
             public void onClick(View v) {
                 if (drawerLayout.isDrawerOpen(Gravity.START))
-                    drawerLayout.closeDrawer(Gravity.START);
+                    drawerLayout.closeDrawer(Gravity.START, !AppState.get().isInkMode);
                 else
-                    drawerLayout.openDrawer(Gravity.START);
+                    drawerLayout.openDrawer(Gravity.START, !AppState.get().isInkMode);
 
             }
         });
@@ -224,7 +237,11 @@ public class MainTabs2 extends FragmentActivity {
         pager = (ViewPager)
 
         findViewById(R.id.pager);
-        pager.setAdapter(adapter);
+
+        if (Android6.canWrite(this)) {
+            pager.setAdapter(adapter);
+        }
+
         pager.setOffscreenPageLimit(5);
         pager.addOnPageChangeListener(onPageChangeListener);
 
@@ -259,10 +276,18 @@ public class MainTabs2 extends FragmentActivity {
         indicator.setSelectedIndicatorColors(Color.WHITE);
         indicator.setBackgroundColor(TintUtil.color);
 
+        if (AppState.get().isInkMode) {
+            TintUtil.setTintImageNoAlpha(imageMenu, TintUtil.color);
+            indicator.setSelectedIndicatorColors(TintUtil.color);
+            indicator.setDividerColors(TintUtil.color);
+            indicator.setBackgroundColor(Color.TRANSPARENT);
+            imageMenuParent.setBackgroundColor(Color.TRANSPARENT);
+
+        }
+
         Android6.checkPermissions(this);
-        Analytics.onStart(this);
-        ADS.activateNative(this, adViewNative);
-        FontExtractor.extractFonts(this);
+        // Analytics.onStart(this);
+
 
         List<String> actions = Arrays.asList("android.intent.action.PROCESS_TEXT", "android.intent.action.SEARCH", "android.intent.action.SEND");
         List<String> extras = Arrays.asList(Intent.EXTRA_PROCESS_TEXT_READONLY, Intent.EXTRA_PROCESS_TEXT, SearchManager.QUERY, Intent.EXTRA_TEXT);
@@ -271,7 +296,7 @@ public class MainTabs2 extends FragmentActivity {
                 for (String extra : extras) {
                     final String text = getIntent().getStringExtra(extra);
                     if (TxtUtils.isNotEmpty(text)) {
-                        AppState.get().lastA = null;
+                        AppState.get().lastClosedActivity = null;
                         pager.postDelayed(new Runnable() {
 
                             @Override
@@ -289,43 +314,77 @@ public class MainTabs2 extends FragmentActivity {
 
         boolean showTabs = getIntent().getBooleanExtra(EXTRA_SHOW_TABS, false);
         LOG.d("EXTRA_SHOW_TABS", showTabs, AppState.get().lastMode);
-        if (showTabs == false && AppState.getInstance().isOpenLastBook) {
-            FileMeta meta = AppDB.get().getRecentLast();
-            AppState.get().lastA = null;
-
-            if (meta != null) {
-                boolean isEasyMode = HorizontalViewActivity.class.getSimpleName().equals(AppState.get().lastMode);
-                Intent intent = new Intent(this, isEasyMode ? HorizontalViewActivity.class : ViewerActivity.class);
-                intent.setData(Uri.fromFile(new File(meta.getPath())));
-                startActivity(intent);
-            }
-        } else if (!AppState.getInstance().isOpenLastBook) {
-            LOG.d("lasta", AppState.get().lastA);
-            if (HorizontalViewActivity.class.getSimpleName().equals(AppState.get().lastA)) {
-
-                FileMeta meta = AppDB.get().getRecentLast();
-                if (meta != null) {
-                    Intent intent = new Intent(this, HorizontalViewActivity.class);
-                    intent.setData(Uri.fromFile(new File(meta.getPath())));
-                    startActivity(intent);
-                    LOG.d("Start lasta", AppState.get().lastA);
+        if (showTabs == false && AppState.get().isOpenLastBook) {
+            if (AppState.get().lastBookPath != null) {
+                LOG.d("Open lastBookPath", AppState.get().lastBookPath);
+                if (!new File(AppState.get().lastBookPath).isFile()) {
+                    LOG.d("Open Last book not found");
+                    return;
                 }
-            } else if (ViewerActivity.class.getSimpleName().equals(AppState.get().lastA)) {
-                FileMeta meta = AppDB.get().getRecentLast();
-                if (meta != null) {
-                    Intent intent = new Intent(this, ViewerActivity.class);
-                    intent.setData(Uri.fromFile(new File(meta.getPath())));
-                    startActivity(intent);
-                    LOG.d("Start lasta", AppState.get().lastA);
-                }
+                AppState.get().lastClosedActivity = null;
 
+                Safe.run(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        boolean isEasyMode = HorizontalViewActivity.class.getSimpleName().equals(AppState.get().lastMode);
+                        Intent intent = new Intent(MainTabs2.this, isEasyMode ? HorizontalViewActivity.class : VerticalViewActivity.class);
+                        intent.putExtra(PasswordDialog.EXTRA_APP_PASSWORD, getIntent().getStringExtra(PasswordDialog.EXTRA_APP_PASSWORD));
+                        intent.setData(Uri.fromFile(new File(AppState.get().lastBookPath)));
+                        startActivity(intent);
+                    }
+                });
             }
+        } else if (false && !AppState.get().isOpenLastBook) {
+            LOG.d("Open book lastA", AppState.get().lastClosedActivity);
+
+            Safe.run(new Runnable() {
+
+                @Override
+                public void run() {
+                    if (HorizontalViewActivity.class.getSimpleName().equals(AppState.get().lastClosedActivity)) {
+
+                        FileMeta meta = AppDB.get().getRecentLast();
+                        if (meta != null) {
+                            Intent intent = new Intent(MainTabs2.this, HorizontalViewActivity.class);
+                            intent.setData(Uri.fromFile(new File(meta.getPath())));
+                            startActivity(intent);
+                            LOG.d("Start lasta", AppState.get().lastClosedActivity);
+                        }
+                    } else if (VerticalViewActivity.class.getSimpleName().equals(AppState.get().lastClosedActivity)) {
+                        FileMeta meta = AppDB.get().getRecentLast();
+                        if (meta != null) {
+                            Intent intent = new Intent(MainTabs2.this, VerticalViewActivity.class);
+                            intent.setData(Uri.fromFile(new File(meta.getPath())));
+                            startActivity(intent);
+                            LOG.d("Start lasta", AppState.get().lastClosedActivity);
+                        }
+
+                    }
+
+                }
+            });
+
+        } else {
+            RecentUpates.updateAll(this);
         }
 
         checkGoToPage(getIntent());
 
-        AndroidWhatsNew.checkForNewBeta(this);
+        try {
+            AndroidWhatsNew.checkForNewBeta(this);
+        } catch (Exception e) {
+            LOG.e(e);
+        }
+        if (Android6.canWrite(this)) {
+            FontExtractor.extractFonts(this);
+        }
+        EventBus.getDefault().register(this);
+    }
 
+    @Subscribe
+    public void onMessegeBrightness(MessegeBrightness msg) {
+        BrightnessHelper.onMessegeBrightness(msg, toastBrightnessText, overlay);
     }
 
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
@@ -336,8 +395,15 @@ public class MainTabs2 extends FragmentActivity {
             if (pos != -1) {
                 pager.setCurrentItem(pos);
             } else {
-                indicator.setBackgroundColor(TintUtil.color);
-                imageMenuParent.setBackgroundColor(TintUtil.color);
+                if (AppState.get().isInkMode) {
+                    TintUtil.setTintImageNoAlpha(imageMenu, TintUtil.color);
+                    indicator.setSelectedIndicatorColors(TintUtil.color);
+                    indicator.setDividerColors(TintUtil.color);
+                    indicator.updateIcons(pager.getCurrentItem());
+                } else {
+                    indicator.setBackgroundColor(TintUtil.color);
+                    imageMenuParent.setBackgroundColor(TintUtil.color);
+                }
             }
         }
 
@@ -353,10 +419,11 @@ public class MainTabs2 extends FragmentActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        ADS.onResumeNative(adViewNative);
-        // DocumentController.chooseFullScreen(this, false);
+        LOG.d(TAG, "onResume");
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        DocumentController.chooseFullScreen(this, AppState.get().isFullScreenMain);
         TintUtil.updateAll();
-        AppState.get().lastA = MainTabs2.class.getSimpleName();
+        AppState.get().lastClosedActivity = MainTabs2.class.getSimpleName();
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter(UIFragment.INTENT_TINT_CHANGE));
 
         try {
@@ -364,21 +431,68 @@ public class MainTabs2 extends FragmentActivity {
         } catch (Exception e) {
             LOG.e(e);
         }
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+
+        BrightnessHelper.applyBrigtness(this);
+        BrightnessHelper.updateOverlay(overlay);
+
     };
+
+    boolean isMyKey = false;
+
+    @Override
+    public boolean onKeyDown(int keyCode1, KeyEvent event) {
+        if (!isEink) {
+            return super.onKeyDown(keyCode1, event);
+        }
+
+        int keyCode = event.getKeyCode();
+        if (keyCode == 0) {
+            keyCode = event.getScanCode();
+        }
+        isMyKey = false;
+        if (tabFragments.get(pager.getCurrentItem()).onKeyDown(keyCode)) {
+            isMyKey = true;
+            return true;
+        }
+
+        return super.onKeyDown(keyCode1, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (!isEink) {
+            return super.onKeyUp(keyCode, event);
+        }
+
+        if (isMyKey) {
+            return true;
+        }
+        // TODO Auto-generated method stub
+        return super.onKeyUp(keyCode, event);
+    }
 
     @Override
     protected void onPause() {
         super.onPause();
-        ADS.onPauseNative(adViewNative);
-        AppState.getInstance().save(this);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        AppState.get().save(this);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver);
-        RecentUpates.updateAll(this);
+        ImageLoader.getInstance().clearAllTasks();
 
     };
 
     @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
+        LOG.d(TAG, "onDestroy");
         if (pager != null) {
             try {
                 pager.setAdapter(null);
@@ -386,20 +500,42 @@ public class MainTabs2 extends FragmentActivity {
                 LOG.e(e);
             }
         }
-        Analytics.onStop(this);
-        ADS.destoryNative(adViewNative);
-        isInStack = false;
+        // Analytics.onStop(this);
+        CacheDir.ZipApp.removeCacheContent();
+        // ImageExtractor.clearErrors();
+        // ImageExtractor.clearCodeDocument();
+
+        if (AppState.get().isAutomaticExport && Android6.canWrite(this)) {
+            try {
+                File root = new File(AppState.get().backupPath);
+                if (!root.isDirectory()) {
+                    root.mkdirs();
+                }
+                File file = new File(root, Apps.getApplicationName(this) + "-" + Apps.getVersionName(this) + "-backup-export-all.JSON.txt");
+                LOG.d("isAutomaticExport", file);
+                ExportSettingsManager.getInstance(this).exportAll(file);
+            } catch (Exception e) {
+                LOG.e(e);
+            }
+        }
+        EventBus.getDefault().unregister(this);
     }
 
     @Override
     public void onConfigurationChanged(final Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        ADS.activateNative(this, adViewNative);
+
+        String language = newConfig.locale.getLanguage();
+        float fontScale = newConfig.fontScale;
+
+        LOG.d("ContextWrapper ConfigChanged", language, fontScale);
+
         if (pager != null) {
             int currentItem = pager.getCurrentItem();
             pager.setAdapter(adapter);
             pager.setCurrentItem(currentItem);
         }
+
     }
 
     @Override
@@ -427,16 +563,6 @@ public class MainTabs2 extends FragmentActivity {
     };
     private SlidingTabLayout indicator;
 
-    public void closeActivity() {
-
-        if (mInterstitialAd != null && mInterstitialAd.isLoaded()) {
-            mInterstitialAd.show();
-        } else {
-            TempHolder.listHash = 0;
-            finish();
-        }
-    }
-
     @Override
     public boolean onKeyLongPress(final int keyCode, final KeyEvent event) {
         if (CloseAppDialog.checkLongPress(this, event)) {
@@ -447,40 +573,57 @@ public class MainTabs2 extends FragmentActivity {
     }
 
     @Override
+    public void onFinishActivity() {
+        finish();
+    }
+
+    @Override
     public void onBackPressed() {
-        if (!tabFragments.isEmpty() && tabFragments.get(pager.getCurrentItem()).isBackPressed()) {
+        if (isInterstialShown()) {
+            onFinishActivity();
             return;
         }
+        if (tabFragments != null) {
+            if (!tabFragments.isEmpty() && tabFragments.get(pager.getCurrentItem()).isBackPressed()) {
+                return;
+            }
 
-        CloseAppDialog.show(this, closeActivityRunnable);
+            CloseAppDialog.show(this, closeActivityRunnable);
+        } else {
+            finish();
+        }
     }
 
     Runnable closeActivityRunnable = new Runnable() {
 
         @Override
         public void run() {
-            closeActivity();
-
+            showInterstial();
         }
     };
 
     public static void startActivity(Activity c, int tab) {
-        AppState.get().lastA = null;
+        AppState.get().lastClosedActivity = null;
         final Intent intent = new Intent(c, MainTabs2.class);
         intent.putExtra(MainTabs2.EXTRA_SHOW_TABS, true);
         intent.putExtra(MainTabs2.EXTRA_PAGE_NUMBER, tab);
+        intent.putExtra(PasswordDialog.EXTRA_APP_PASSWORD, c.getIntent().getStringExtra(PasswordDialog.EXTRA_APP_PASSWORD));
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         c.startActivity(intent);
         c.overridePendingTransition(0, 0);
 
     }
 
+    @Subscribe
+    public void onCloseAppMsg(MsgCloseMainTabs event) {
+        onFinishActivity();
+    }
+
     public static void closeApp(Context c) {
-        if (MainTabs2.isInStack) {
-            Intent startMain = new Intent(c, MainTabs2.class);
-            startMain.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startMain.putExtra(MainTabs2.EXTRA_EXIT, true);
-            c.startActivity(startMain);
+        if (c == null) {
+            return;
         }
+        EventBus.getDefault().post(new MsgCloseMainTabs());
     }
 
 }

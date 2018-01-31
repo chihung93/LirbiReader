@@ -53,6 +53,11 @@ public class DjvuPage extends AbstractCodecPage {
     }
 
     @Override
+    public int getCharCount() {
+        return 0;
+    }
+
+    @Override
     public int getHeight() {
         if (h == 0) {
             h = getHeight(pageHandle);
@@ -66,6 +71,11 @@ public class DjvuPage extends AbstractCodecPage {
     }
 
     @Override
+    public String getPageHTMLWithImages() {
+        return "";
+    }
+
+    @Override
     public BitmapRef renderBitmap(final int width, final int height, final RectF pageSliceBounds) {
         LOG.d("Render DJVU Page", width, height, pageSliceBounds);
         final int renderMode = AppSettings.getInstance().djvuRenderingMode;
@@ -75,7 +85,9 @@ public class DjvuPage extends AbstractCodecPage {
             final int[] buffer = new int[width * height];
             renderPageWrapper(pageHandle, contextHandle, width, height, pageSliceBounds.left, pageSliceBounds.top, pageSliceBounds.width(), pageSliceBounds.height(), buffer, renderMode);
 
-            MagicHelper.applyQuickContrastAndBrightness(buffer);
+            if (MagicHelper.isNeedBC) {
+                MagicHelper.applyQuickContrastAndBrightness(buffer, width, height);
+            }
 
             MagicHelper.udpateColorsMagic(buffer);
             bmp.getBitmap().setPixels(buffer, 0, width, 0, 0, width, height);
@@ -128,13 +140,16 @@ public class DjvuPage extends AbstractCodecPage {
 
     @Override
     public synchronized void recycle() {
-        if (pageHandle == 0) {
-            return;
-        }
         TempHolder.lock.lock();
         try {
-            free(pageHandle);
+            if (pageHandle == 0) {
+                return;
+            }
+
+            LOG.d("MUPDF! recycle page", docHandle, pageHandle);
+            long p = pageHandle;
             pageHandle = 0;
+            free(p);
         } finally {
             TempHolder.lock.unlock();
         }
@@ -178,10 +193,6 @@ public class DjvuPage extends AbstractCodecPage {
         return Collections.emptyList();
     }
 
-    @Override
-    public List<PageTextBox> getPageText() {
-        return Collections.emptyList();
-    }
 
     public List<PageTextBox> getPageText1() {
         final List<PageTextBox> list = getPageText(docHandle, pageNo, contextHandle, null);
@@ -196,10 +207,6 @@ public class DjvuPage extends AbstractCodecPage {
         return list;
     }
 
-    @Override
-    public List<? extends RectF> searchText(final String pattern) {
-        return Collections.EMPTY_LIST;
-    }
 
     static void normalize(final RectF r, final float width, final float height) {
         r.left = r.left / width;
@@ -225,7 +232,8 @@ public class DjvuPage extends AbstractCodecPage {
 
     private static native boolean isDecodingDone(long pageHandle);
 
-    private boolean renderPageWrapper(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, int[] buffer, int renderMode) {
+    private boolean renderPageWrapper(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, int[] buffer,
+            int renderMode) {
         try {
             TempHolder.lock.lock();
             return renderPage(pageHandle, contextHandle, targetWidth, targetHeight, pageSliceX, pageSliceY, pageSliceWidth, pageSliceHeight, buffer, renderMode);
@@ -234,7 +242,8 @@ public class DjvuPage extends AbstractCodecPage {
         }
     }
 
-    private boolean renderPageBitmapWrapper(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, Bitmap bitmap, int renderMode) {
+    private boolean renderPageBitmapWrapper(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, Bitmap bitmap,
+            int renderMode) {
         try {
             TempHolder.lock.lock();
             return renderPageBitmap(pageHandle, contextHandle, targetWidth, targetHeight, pageSliceX, pageSliceY, pageSliceWidth, pageSliceHeight, bitmap, renderMode);
@@ -243,9 +252,11 @@ public class DjvuPage extends AbstractCodecPage {
         }
     }
 
-    private static native boolean renderPage(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, int[] buffer, int renderMode);
+    private static native boolean renderPage(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, int[] buffer,
+            int renderMode);
 
-    private static native boolean renderPageBitmap(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, Bitmap bitmap, int renderMode);
+    private static native boolean renderPageBitmap(long pageHandle, long contextHandle, int targetWidth, int targetHeight, float pageSliceX, float pageSliceY, float pageSliceWidth, float pageSliceHeight, Bitmap bitmap,
+            int renderMode);
 
     private static native void free(long pageHandle);
 

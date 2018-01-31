@@ -12,23 +12,30 @@ import com.foobnix.ext.CacheZipUtils;
 import com.foobnix.ext.EpubExtractor;
 import com.foobnix.pdf.info.JsonHelper;
 import com.foobnix.pdf.info.model.BookCSS;
+import com.foobnix.sys.TempHolder;
 
 public class EpubContext extends PdfContext {
 
+    private static final String TAG = "EpubContext";
     File cacheFile;
 
     @Override
     public File getCacheFileName(String fileNameOriginal) {
+        LOG.d(TAG, "getCacheFileName", fileNameOriginal, BookCSS.get().hypenLang);
         cacheFile = new File(CacheZipUtils.CACHE_BOOK_DIR, (fileNameOriginal + BookCSS.get().isAutoHypens + BookCSS.get().hypenLang).hashCode() + ".epub");
         return cacheFile;
     }
 
     @Override
     public CodecDocument openDocumentInner(final String fileName, String password) {
-        LOG.d("Context", "EpubContext", fileName);
+        LOG.d(TAG, fileName);
 
         if (BookCSS.get().isAutoHypens && !cacheFile.isFile()) {
             EpubExtractor.proccessHypens(fileName, cacheFile.getPath());
+        }
+        if (TempHolder.get().loadingCancelled) {
+            removeTempFiles();
+            return null;
         }
 
         String bookPath = BookCSS.get().isAutoHypens ? cacheFile.getPath() : fileName;
@@ -53,6 +60,7 @@ public class EpubContext extends PdfContext {
                         JsonHelper.mapToFile(jsonFile, notes);
                         LOG.d("save notes to file", jsonFile);
                     }
+                    removeTempFiles();
                 } catch (Exception e) {
                     LOG.e(e);
                 }

@@ -1,7 +1,8 @@
-* Libros gratuitos en catálogos 
-* Añadir enlaces a los favoritos del catálogo 
-* Cifra automática para el lenguaje del libro 
-* Lista de premios del libro y listas de libros superiores 
-* Apoyar el catálogo personal de FBReader 
-* Mostrar todas las series por autor, por género 
-* Muchas mejoras y pequeñas correcciones por sus comentarios
+* Mejora la velocidad de apertura de todos los formatos y PDF, EPUB 
+* TemaTinta para dispositivos con tinta electrónica 
+* Cambio de contraste y brillo 
+* Brillo negativo 
+* Filtro de luz azul 
+* Autocompletar consultas en la biblioteca 
+* Interfaz mejorada 
+* Muchas mejoras y correcciones de errores

@@ -18,8 +18,8 @@ public class PageUrl {
     private int height;
     private int unic;
     private int cutp;
-    private int position;
     private boolean isDouble;
+    private boolean doText;
 
     public boolean tempWithWatermakr = false;
 
@@ -86,7 +86,7 @@ public class PageUrl {
         url.setPage(AppState.get().isCut ? page / 2 : page);
         url.setWidth(AppState.get().isCut ? (int) (w * 2) : w);
         url.setHeight(AppState.get().isCut ? (int) (h * 2) : h);
-        url.setInvert(!AppState.get().isInvert);
+        url.setInvert(!AppState.get().isDayNotInvert);
         url.setCrop(AppState.get().isCrop);
         url.setRotate(AppState.get().rotate);
         url.setCutp(AppState.get().cutP);
@@ -122,8 +122,8 @@ public class PageUrl {
             obj.put("unic", unic);
             obj.put("cutp", cutp);
             obj.put("m", MagicHelper.hash());
-            obj.put("p", position);
             obj.put("isDouble", isDouble);
+            obj.put("doText", doText);
             return obj.toString();
         } catch (final Exception e) {
             return "";
@@ -144,8 +144,8 @@ public class PageUrl {
             url.height = obj.optInt("height");
             url.unic = obj.optInt("unic");
             url.cutp = obj.optInt("cutp");
-            url.position = obj.optInt("p");
             url.isDouble = obj.optBoolean("isDouble");
+            url.doText = obj.optBoolean("doText");
             return url;
         } catch (final Exception e) {
 
@@ -230,13 +230,6 @@ public class PageUrl {
         this.unic = unic;
     }
 
-    public int getPosition() {
-        return position;
-    }
-
-    public void setPosition(int position) {
-        this.position = position;
-    }
 
     public boolean isDouble() {
         return isDouble;
@@ -245,5 +238,14 @@ public class PageUrl {
     public void setDouble(boolean isDouble) {
         this.isDouble = isDouble;
     }
+
+    public boolean isDoText() {
+        return doText;
+    }
+
+    public void setDoText(boolean doText) {
+        this.doText = doText;
+    }
+
 
 }

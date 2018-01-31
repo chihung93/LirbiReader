@@ -1,6 +1,7 @@
 package com.foobnix.pdf.info.widget;
 
 import com.foobnix.android.utils.AsyncTasks;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.opds.Entry;
@@ -9,6 +10,7 @@ import com.foobnix.opds.Hrefs;
 import com.foobnix.opds.OPDS;
 import com.foobnix.pdf.info.IMG;
 import com.foobnix.pdf.reader.R;
+import com.foobnix.pdf.info.TintUtil;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.sys.TempHolder;
 import com.nostra13.universalimageloader.core.ImageLoader;
@@ -16,6 +18,7 @@ import com.nostra13.universalimageloader.core.ImageLoader;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnDismissListener;
 import android.os.AsyncTask;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -31,7 +34,7 @@ import android.widget.Toast;
 public class AddCatalogDialog {
 
     public static void showDialogLogin(final Activity a, final Runnable onRefresh) {
-
+        LOG.d("showDialogLogin");
         AlertDialog.Builder builder = new AlertDialog.Builder(a);
 
         builder.setTitle(R.string.authentication_required);
@@ -97,6 +100,7 @@ public class AddCatalogDialog {
         final EditText name = (EditText) dialog.findViewById(R.id.name);
         final EditText description = (EditText) dialog.findViewById(R.id.description);
         final ProgressBar progressBar = (ProgressBar) dialog.findViewById(R.id.progressBar);
+        TintUtil.setDrawableTint(progressBar.getIndeterminateDrawable().getCurrent(), TintUtil.color);
         final ImageView image = (ImageView) dialog.findViewById(R.id.image);
         final CheckBox addAsWEb = (CheckBox) dialog.findViewById(R.id.addAsWEb);
         addAsWEb.setVisibility(View.GONE);
@@ -106,7 +110,7 @@ public class AddCatalogDialog {
             url.setText(line[0]);
             name.setText(line[1]);
             description.setText(line[2]);
-            ImageLoader.getInstance().displayImage(line[3], image, IMG.displayImageOptions);
+            ImageLoader.getInstance().displayImage(line[3], image, IMG.displayCacheMemoryDisc);
 
             if (e.logo != null) {
                 image.setTag(e.logo);
@@ -129,11 +133,19 @@ public class AddCatalogDialog {
         builder.setNegativeButton(R.string.close, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-
+                Keyboards.close(a);
             }
         });
 
         final AlertDialog infoDialog = builder.create();
+        infoDialog.setOnDismissListener(new OnDismissListener() {
+
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Keyboards.close(a);
+
+            }
+        });
         infoDialog.show();
 
         url.addTextChangedListener(new TextWatcher() {
@@ -166,9 +178,9 @@ public class AddCatalogDialog {
                     Entry entry = new Entry();
                     entry.setAppState(feedUrl, name.getText().toString(), description.getText().toString(), image.getTag().toString());
                     if (editAppState != null) {
-                        AppState.get().myOPDS = AppState.get().myOPDS.replace(editAppState, "");
+                        AppState.get().myOPDSLinks = AppState.get().myOPDSLinks.replace(editAppState, "");
                     }
-                    AppState.get().myOPDS = entry.appState + AppState.get().myOPDS;
+                    AppState.get().myOPDSLinks = entry.appState + AppState.get().myOPDSLinks;
                     onRefresh.run();
                     infoDialog.dismiss();
                     AppState.get().save(a);
@@ -198,10 +210,22 @@ public class AddCatalogDialog {
                         try {
                             progressBar.setVisibility(View.GONE);
                             if (result == null || ((Feed) result).entries.isEmpty()) {
-                                Toast.makeText(a, a.getString(R.string.incorrect_value) + " OPDS " + feedUrl, Toast.LENGTH_LONG).show();
-                                infoDialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(R.string.add);
-                                addAsWEb.setVisibility(View.VISIBLE);
-                                image.setTag("assets://opds/web.png");
+                                if (result != null && ((Feed) result).isNeedLoginPassword) {
+                                    AddCatalogDialog.showDialogLogin(a, new Runnable() {
+
+                                        @Override
+                                        public void run() {
+
+                                        }
+                                    });
+
+                                } else {
+                                    Toast.makeText(a, a.getString(R.string.incorrect_value) + " OPDS " + feedUrl, Toast.LENGTH_LONG).show();
+                                    infoDialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(R.string.add);
+                                    addAsWEb.setVisibility(View.VISIBLE);
+                                    name.setText(feedUrl);
+                                    image.setTag("assets://opds/web.png");
+                                }
                                 return;
                             }
                             Feed feed = (Feed) result;
@@ -214,7 +238,7 @@ public class AddCatalogDialog {
                                 image.setVisibility(View.VISIBLE);
                                 feed.icon = Hrefs.fixHref(feed.icon, feedUrl);
                                 image.setTag(feed.icon);
-                                ImageLoader.getInstance().displayImage(feed.icon, image, IMG.displayImageOptions);
+                                ImageLoader.getInstance().displayImage(feed.icon, image, IMG.displayCacheMemoryDisc);
                             } else {
                                 image.setTag("assets://opds/web.png");
                             }

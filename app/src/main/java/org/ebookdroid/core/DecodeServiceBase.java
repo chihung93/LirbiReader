@@ -32,10 +32,12 @@ import org.emdev.utils.MathUtils;
 
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse;
+import com.foobnix.android.utils.Safe;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.pdf.info.model.AnnotationType;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
 import com.foobnix.sys.Colors;
+import com.foobnix.sys.ImageExtractor;
 import com.foobnix.sys.TempHolder;
 
 import android.graphics.Bitmap.Config;
@@ -133,8 +135,11 @@ public class DecodeServiceBase implements DecodeService {
 
     @Override
     public void open(final String fileName, final String password) {
+        ImageExtractor.clearCodeDocument();
         document = codecContext.openDocument(fileName, password);
-        TempHolder.get().init(document, fileName);
+        ImageExtractor.init(document, fileName);
+        TempHolder.get().init(fileName);
+
     }
 
     @Override
@@ -314,6 +319,8 @@ public class DecodeServiceBase implements DecodeService {
             // TempHolder.lock.unlock();
 
             finishDecoding(task, vuPage, bitmap, r, croppedPageBounds);
+            // test
+            // vuPage.recycle();
 
         } catch (final OutOfMemoryError ex) {
             for (int i = 0; i <= AppSettings.getInstance().pagesInMemory; i++) {
@@ -437,7 +444,8 @@ public class DecodeServiceBase implements DecodeService {
 
         // Preventing problem inside the MuPDF
         if (!codecContext.isParallelPageAccessAvailable()) {
-            holder.getPage(taskId);
+            // holder.getPage(taskId);
+            // TODO TEST!!!
         }
         return holder;
     }
@@ -655,7 +663,8 @@ public class DecodeServiceBase implements DecodeService {
                     stopDecoding(task, null, "recycling");
                 }
 
-                tasks.add(new ShutdownTask());
+                // tasks.add(new ShutdownTask());
+                shutdownInner();
 
                 synchronized (run) {
                     run.notifyAll();
@@ -668,6 +677,16 @@ public class DecodeServiceBase implements DecodeService {
         }
 
         void shutdown() {
+            Safe.run(new Runnable() {
+
+                @Override
+                public void run() {
+                    shutdownInner();
+                }
+            });
+        }
+
+        private void shutdownInner() {
             TempHolder.get().clear();
 
             LOG.d("Begin shutdown 1");
@@ -675,19 +694,25 @@ public class DecodeServiceBase implements DecodeService {
             for (final CodecPageHolder ref : getPages().values()) {
                 ref.recycle(-3, true);
             }
+
             LOG.d("Begin shutdown 2");
+
 
             getPages().clear();
 
             LOG.d("Begin shutdown 3");
             if (document != null) {
                 document.recycle();
+                document = null;
             }
             LOG.d("Begin shutdown 4");
             codecContext.recycle();
             LOG.d("Begin shutdown 5");
             run.set(false);
             LOG.d("Begin shutdown 6");
+
+            ImageExtractor.clearCodeDocument();
+
         }
 
     }

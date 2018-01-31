@@ -10,6 +10,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -22,21 +23,32 @@ import org.ebookdroid.BookType;
 import org.ebookdroid.common.cache.CacheManager;
 import org.ebookdroid.core.codec.CodecDocument;
 import org.ebookdroid.core.codec.CodecPage;
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.core.codec.OutlineLink;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
 import org.json.JSONObject;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import com.foobnix.android.utils.Apps;
 import com.foobnix.android.utils.Dips;
+import com.foobnix.android.utils.Keyboards;
 import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.ResultResponse2;
+import com.foobnix.android.utils.Safe;
 import com.foobnix.android.utils.TxtUtils;
+import com.foobnix.android.utils.Views;
+import com.foobnix.dao2.FileMeta;
 import com.foobnix.ext.CacheZipUtils;
+import com.foobnix.ext.Fb2Extractor;
 import com.foobnix.pdf.info.model.BookCSS;
 import com.foobnix.pdf.info.widget.ChooserDialogFragment;
 import com.foobnix.pdf.info.wrapper.AppBookmark;
 import com.foobnix.pdf.info.wrapper.AppState;
+import com.foobnix.pdf.info.wrapper.DocumentController;
+import com.foobnix.pdf.reader.R;
+import com.foobnix.pdf.search.activity.HorizontalModeController;
 import com.foobnix.pdf.search.activity.HorizontalViewActivity;
+import com.foobnix.sys.TempHolder;
+import com.foobnix.ui2.AppDB;
 import com.foobnix.zipmanager.ZipDialog;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
@@ -44,33 +56,46 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v4.os.EnvironmentCompat;
 import android.text.format.DateFormat;
+import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
+import android.view.WindowManager;
 import android.webkit.MimeTypeMap;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
-import com.foobnix.pdf.reader.R;
 
 public class ExtUtils {
 
-    public static final String REFLOW_FB2 = "-reflow.fb2";
+    private static final String IMAGE_PNG_BASE64 = "image/png;base64,";
+    private static final String IMAGE_JPEG_BASE64 = "image/jpeg;base64,";
+    public static final String REFLOW_EPUB = "-reflow.epub";
+    public static final String REFLOW_HTML = "-reflow.html";
+    private static final String IMAGE_BEGIN = "<image-begin>";
+    private static final String IMAGE_END = "<image-end>";
 
     public static ExecutorService ES = Executors.newFixedThreadPool(4);
 
@@ -88,6 +113,12 @@ public class ExtUtils {
         browseExts.addAll(lirbeExt);
         browseExts.add(".json");
         browseExts.addAll(BookCSS.fontExts);
+        browseExts.addAll(Arrays.asList(AppState.OTHER_BOOK_MEDIA));
+
+        mimeCache.put(".tpz", "application/x-topaz-ebook");
+        mimeCache.put(".azw1", "application/x-topaz-ebook");
+
+        mimeCache.put(".pgn", " application/x-chess-pgn");
 
         mimeCache.put(".jpeg", "image/jpeg");
         mimeCache.put(".jpg", "image/jpeg");
@@ -184,11 +215,15 @@ public class ExtUtils {
     }
 
     public static boolean isNotSupportedFile(File file) {
-        return !BookType.isSupportedExtByPath(file.getPath()) && (isLibreFile(file) || isImageFile(file) || isOtherFile(file) || isFileArchive(file));
+        return !BookType.isSupportedExtByPath(file.getPath());
     }
 
     public static boolean isImageOrEpub(File file) {
         return ExtUtils.isImageFile(file) || ExtUtils.isFileArchive(file) || BookType.EPUB.is(file.getPath());
+    }
+
+    public static boolean isNoTextLayerForamt(String name) {
+        return BookType.DJVU.is(name) || BookType.CBR.is(name) || BookType.CBZ.is(name) || BookType.TIFF.is(name);
     }
 
     public static String getMimeTypeByUri(Uri uri) {
@@ -319,9 +354,17 @@ public class ExtUtils {
     }
 
     public static String getFileExtension(String name) {
+        LOG.d("getFileExtension 1", name);
         if (name == null) {
             return "";
         }
+        if (name.contains("/")) {
+            name = name.substring(name.lastIndexOf("/") + 1);
+        }
+        if (!name.contains(".")) {
+            return "";
+        }
+
         try {
             return name.substring(name.lastIndexOf(".") + 1);
         } catch (Exception e) {
@@ -420,7 +463,7 @@ public class ExtUtils {
             return true;
         }
         if (c != null) {
-            Toast.makeText(c, c.getString(R.string.file_not_found) + file.getPath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(c, c.getString(R.string.file_not_found) + " " + file.getPath(), Toast.LENGTH_LONG).show();
         }
         return false;
 
@@ -508,55 +551,164 @@ public class ExtUtils {
     }
 
     public static boolean showDocument(final Context c, final File file, final int page) {
-        if (AppState.getInstance().isRememberMode) {
+
+        ImageLoader.getInstance().clearAllTasks();
+
+        if (AppState.get().isRememberMode) {
             showDocumentWithoutDialog(c, file, page);
             return true;
         }
 
         View view = LayoutInflater.from(c).inflate(R.layout.choose_mode_dialog, null, false);
 
+        final TextView vertical = (TextView) view.findViewById(R.id.vertical);
+        final TextView horizontal = (TextView) view.findViewById(R.id.horizontal);
+        final TextView music = (TextView) view.findViewById(R.id.music);
+
+        final EditText verticalEdit = (EditText) view.findViewById(R.id.verticalEdit);
+        final EditText horizontalEdit = (EditText) view.findViewById(R.id.horizontalEdit);
+        final EditText musicEdit = (EditText) view.findViewById(R.id.musicEdit);
+
+        verticalEdit.setText(AppState.get().nameVerticalMode);
+        horizontalEdit.setText(AppState.get().nameHorizontalMode);
+        musicEdit.setText(AppState.get().nameMusicianMode);
+
+        vertical.setText(AppState.get().nameVerticalMode);
+        horizontal.setText(AppState.get().nameHorizontalMode);
+        music.setText(AppState.get().nameMusicianMode);
+
+        Views.gone(verticalEdit, horizontalEdit, musicEdit);
+
+        final TextView editNames = (TextView) view.findViewById(R.id.editNames);
+        TxtUtils.underlineTextView(editNames);
+
+        editNames.setOnLongClickListener(new OnLongClickListener() {
+
+            @Override
+            public boolean onLongClick(View v) {
+                AppState.get().nameVerticalMode = c.getString(R.string.mode_vertical);
+                AppState.get().nameHorizontalMode = c.getString(R.string.mode_horizontally);
+                AppState.get().nameMusicianMode = c.getString(R.string.mode_musician);
+
+                verticalEdit.setText(AppState.get().nameVerticalMode);
+                horizontalEdit.setText(AppState.get().nameHorizontalMode);
+                musicEdit.setText(AppState.get().nameMusicianMode);
+
+                vertical.setText(AppState.get().nameVerticalMode);
+                horizontal.setText(AppState.get().nameHorizontalMode);
+                music.setText(AppState.get().nameMusicianMode);
+
+                AppState.get().save(c);
+
+                return true;
+            }
+        });
+
+        editNames.setOnClickListener(new View.OnClickListener() {
+            boolean isEdit = true;
+
+            @Override
+            public void onClick(View v) {
+
+                String vText = verticalEdit.getText().toString().trim();
+                String hText = horizontalEdit.getText().toString().trim();
+                String mText = musicEdit.getText().toString().trim();
+
+                if (TxtUtils.isEmpty(vText)) {
+                    verticalEdit.setSelected(true);
+                    Toast.makeText(c, R.string.incorrect_value, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (TxtUtils.isEmpty(hText)) {
+                    horizontalEdit.setSelected(true);
+                    Toast.makeText(c, R.string.incorrect_value, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (TxtUtils.isEmpty(mText)) {
+                    musicEdit.setSelected(true);
+                    Toast.makeText(c, R.string.incorrect_value, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (isEdit) { // edit
+                    editNames.setText(R.string.save);
+                    Views.visible(verticalEdit, horizontalEdit, musicEdit);
+                    Views.gone(vertical, horizontal, music);
+
+                    AppState.get().save(c);
+
+                } else { // text view
+                    editNames.setText(R.string.edit_names);
+                    Views.visible(vertical, horizontal, music);
+                    Views.gone(verticalEdit, horizontalEdit, musicEdit);
+                }
+
+                AppState.get().nameVerticalMode = vText;
+                AppState.get().nameHorizontalMode = hText;
+                AppState.get().nameMusicianMode = mText;
+
+                Keyboards.close(v);
+
+                verticalEdit.setText(AppState.get().nameVerticalMode);
+                horizontalEdit.setText(AppState.get().nameHorizontalMode);
+                musicEdit.setText(AppState.get().nameMusicianMode);
+
+                vertical.setText(AppState.get().nameVerticalMode);
+                horizontal.setText(AppState.get().nameHorizontalMode);
+                music.setText(AppState.get().nameMusicianMode);
+
+                TxtUtils.underlineTextView(editNames);
+                isEdit = !isEdit;
+            }
+        });
+
         AlertDialog.Builder builder = new AlertDialog.Builder(c);
-        builder.setTitle(R.string.choose_);
+        builder.setTitle(R.string.select_the_reading_mode);
         builder.setView(view);
         builder.setCancelable(true);
         final AlertDialog dialog = builder.show();
 
-        view.findViewById(R.id.advanced).setOnClickListener(new View.OnClickListener() {
+        vertical.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                AppState.getInstance().isAlwaysOpenAsMagazine = false;
-                AppState.getInstance().isMusicianMode = false;
-                showDocumentWithoutDialog(c, file, page);
                 dialog.dismiss();
+                AppState.get().isAlwaysOpenAsMagazine = false;
+                AppState.get().isMusicianMode = false;
+                showDocumentWithoutDialog(c, file, page);
             }
         });
-        view.findViewById(R.id.simple).setOnClickListener(new View.OnClickListener() {
+        horizontal.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                AppState.getInstance().isAlwaysOpenAsMagazine = true;
-                AppState.getInstance().isMusicianMode = false;
-                showDocumentWithoutDialog(c, file, page);
                 dialog.dismiss();
+                AppState.get().isAlwaysOpenAsMagazine = true;
+                AppState.get().isMusicianMode = false;
+                showDocumentWithoutDialog(c, file, page);
             }
         });
-        view.findViewById(R.id.music).setOnClickListener(new View.OnClickListener() {
+
+        music.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                AppState.getInstance().isAlwaysOpenAsMagazine = false;
-                AppState.getInstance().isMusicianMode = true;
-                showDocumentWithoutDialog(c, file, page);
                 dialog.dismiss();
+                AppState.get().isAlwaysOpenAsMagazine = false;
+                AppState.get().isMusicianMode = true;
+                showDocumentWithoutDialog(c, file, page);
             }
         });
+
+        if (Dips.isEInk(c)) {
+            view.findViewById(R.id.music).setVisibility(View.GONE);
+        }
         CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBoxRemember);
         checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                AppState.getInstance().isRememberMode = isChecked;
+                AppState.get().isRememberMode = isChecked;
             }
         });
 
@@ -564,8 +716,8 @@ public class ExtUtils {
 
     }
 
-    public static boolean showDocumentWithoutDialog(final Context c, final File file, final int page) {
-        return showDocument(c, Uri.fromFile(file), page);
+    public static void showDocumentWithoutDialog(final Context c, final File file, final int page) {
+        showDocument(c, Uri.fromFile(file), page);
     }
 
     public static boolean showDocument(final Activity c, final Uri uri) {
@@ -577,19 +729,35 @@ public class ExtUtils {
         return showDocument(c, new File(filePath), -1);
     }
 
-    public static boolean showDocument(final Context c, final Uri uri, final int page) {
+    public static void showDocument(final Context c, final Uri uri, final int page) {
+        Safe.run(new Runnable() {
+
+            @Override
+            public void run() {
+                showDocumentInner(c, uri, page);
+            }
+        });
+
+    }
+
+    public static void showDocumentInner(final Context c, final Uri uri, final int page) {
         if (!isValidFile(uri)) {
             Toast.makeText(c, R.string.file_not_found, Toast.LENGTH_LONG).show();
-            return false;
+            return;
         }
         LOG.d("showDocument", uri.getPath());
 
-        if (AppState.getInstance().isAlwaysOpenAsMagazine) {
+        if (AppState.get().isAlwaysOpenAsMagazine) {
             openHorizontalView(c, new File(uri.getPath()), page - 1);
-            return true;
+            return;
         }
 
-        final Intent intent = new Intent(c, ViewerActivity.class);
+        final Intent intent = new Intent(c, VerticalViewActivity.class);
+        try {
+            intent.putExtra(PasswordDialog.EXTRA_APP_PASSWORD, ((Activity) c).getIntent().getStringExtra(PasswordDialog.EXTRA_APP_PASSWORD));
+        } catch (Exception e) {
+            LOG.e(e);
+        }
         intent.setData(uri);
 
         if (page > 0) {
@@ -598,8 +766,6 @@ public class ExtUtils {
 
         c.startActivity(intent);
         // FileMetaDB.get().addRecent(uri.getPath());
-
-        return true;
     }
 
     private static void openHorizontalView(final Context c, final File file, final int page) {
@@ -614,6 +780,11 @@ public class ExtUtils {
 
         final Intent intent = new Intent(c, HorizontalViewActivity.class);
         intent.setData(Uri.fromFile(file));
+        try {
+            intent.putExtra(PasswordDialog.EXTRA_APP_PASSWORD, ((Activity) c).getIntent().getStringExtra(PasswordDialog.EXTRA_APP_PASSWORD));
+        } catch (Exception e) {
+            LOG.e(e);
+        }
 
         if (page > 0) {
             intent.putExtra("page", page);
@@ -626,30 +797,95 @@ public class ExtUtils {
 
     }
 
-    public static void openWith(final Context a, final File file) {
-        try {
-            if (!isValidFile(file)) {
-                Toast.makeText(a, R.string.file_not_found, Toast.LENGTH_LONG).show();
-                return;
+    public static Intent createOpenFileIntent(Context context, File file) {
+        String extension = extensionFromName(file.getName());
+        String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        if (mimeType == null) {
+            // If android doesn't know extension we can check our own list.
+            mimeType = getMimeType(file);
+        }
+
+        Intent openIntent = new Intent();
+        openIntent.setAction(android.content.Intent.ACTION_VIEW);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        openIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        // openIntent.setDataAndType(getUriProvider(context, file), mimeType);
+        openIntent.setDataAndType(getUriProvider(context, file), mimeType);
+        // LOG.d("getUriProvider2", getUriProvider(context, file));
+        // LOG.d("getUriProvider2", Uri.fromFile(file));
+
+        // 1. Check if there is a default app opener for this type of content.
+        final PackageManager packageManager = context.getPackageManager();
+        ResolveInfo defaultAppInfo = packageManager.resolveActivity(openIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        if (!defaultAppInfo.activityInfo.name.endsWith("ResolverActivity")) {
+            return openIntent;
+        }
+
+        // 2. Retrieve all apps for our intent. If there are no apps - return usual
+        // already created intent.
+        List<Intent> targetedOpenIntents = new ArrayList<Intent>();
+        List<ResolveInfo> appInfoList = packageManager.queryIntentActivities(openIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        if (appInfoList.isEmpty()) {
+            return openIntent;
+        }
+
+        // 3. Sort in alphabetical order, filter itself and create intent with the rest
+        // of the apps.
+        Collections.sort(appInfoList, new Comparator<ResolveInfo>() {
+            @Override
+            public int compare(ResolveInfo first, ResolveInfo second) {
+                String firstName = packageManager.getApplicationLabel(first.activityInfo.applicationInfo).toString();
+                String secondName = packageManager.getApplicationLabel(second.activityInfo.applicationInfo).toString();
+                return firstName.compareToIgnoreCase(secondName);
+            }
+        });
+        for (ResolveInfo appInfo : appInfoList) {
+            String packageName = appInfo.activityInfo.packageName;
+            if (packageName.equals(context.getPackageName())) {
+                continue;
             }
 
-            final Intent intent = new Intent();
-            intent.setAction(android.content.Intent.ACTION_VIEW);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.setDataAndType(getUriProvider(a, file), getMimeType(file));
-            a.startActivity(intent);
-        } catch (Exception e) {
-            LOG.e(e);
-            Toast.makeText(a, "" + e.getMessage(), Toast.LENGTH_LONG).show();
+            Intent targetedOpenIntent = new Intent(android.content.Intent.ACTION_VIEW);
+            targetedOpenIntent.setDataAndType(getUriProvider(context, file), mimeType);
+            targetedOpenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            targetedOpenIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            targetedOpenIntent.setPackage(packageName);
+
+            targetedOpenIntents.add(targetedOpenIntent);
+        }
+        Intent remove = targetedOpenIntents.remove(targetedOpenIntents.size() - 1);
+        Intent createChooser = Intent.createChooser(remove, context.getString(R.string.select));
+        Intent chooserIntent = createChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetedOpenIntents.toArray(new Parcelable[] {}));
+
+        return chooserIntent;
+    }
+
+    public static String extensionFromName(String fileName) {
+        int dotPosition = fileName.lastIndexOf('.');
+
+        // If extension not present or empty
+        if (dotPosition == -1 || dotPosition == fileName.length() - 1) {
+            return "";
+        } else {
+            return fileName.substring(dotPosition + 1).toLowerCase(Locale.getDefault());
         }
     }
 
+    public static void openWith(final Context a, final File file) {
+        a.startActivity(createOpenFileIntent(a, file));
+    }
+
     public static Uri getUriProvider(Context a, File file) {
-        if (false && Apps.getTargetSdkVersion(a) >= 24) {
-            return FileProvider.getUriForFile(a, Apps.getPackageName(a) + ".provider", file);
+        Uri uriForFile = null;
+        // if (Apps.getTargetSdkVersion(a) >= 24) {
+        // if (Apps.getTargetSdkVersion(a) >= 24) {
+        if (Build.VERSION.SDK_INT >= 24) {
+            uriForFile = FileProvider.getUriForFile(a, Apps.getPackageName(a) + ".provider", file);
         } else {
-            return Uri.fromFile(file);
+            uriForFile = Uri.fromFile(file);
         }
+        LOG.d("getUriProvider", uriForFile);
+        return uriForFile;
     }
 
     public static void sendFileTo(final Activity a, final File file) {
@@ -663,13 +899,12 @@ public class ExtUtils {
             intent.putExtra(Intent.EXTRA_EMAIL, new String[] { "" });
             intent.setType(getMimeType(file));
             intent.putExtra(Intent.EXTRA_STREAM, getUriProvider(a, file));
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.putExtra(Intent.EXTRA_SUBJECT, "");
-            intent.putExtra(Intent.EXTRA_TEXT, "" + file.getName() + "\n\n" + "Lirbi Reader");
+            intent.putExtra(Intent.EXTRA_TEXT, "");
 
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-            a.startActivity(intent);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            a.startActivity(Intent.createChooser(intent, a.getString(R.string.send_file_to)));
         } catch (Exception e) {
             LOG.e(e);
             Toast.makeText(a, "" + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -677,29 +912,36 @@ public class ExtUtils {
     }
 
     public static String getMimeType(File file) {
+        String mime = "";
         try {
             String name = file.getName().toLowerCase();
             String ext = getFileExtension(name);
 
             String mimeType = mimeCache.get("." + ext);
             if (mimeType != null) {
-                return mimeType;
+                mime = mimeType;
+            } else {
+                BookType codecType = BookType.getByUri(name);
+                mime = codecType.getFirstMimeTime();
             }
-
-            BookType codecType = BookType.getByUri(name);
-            return codecType.getFirstMimeTime();
         } catch (Exception e) {
-            return "application/" + ExtUtils.getFileExtension(file);
+            mime = "application/" + ExtUtils.getFileExtension(file);
         }
+        LOG.d("getMimeType", mime);
+        return mime;
     }
 
-    public static void sharePage(final Activity a, final File file, int page) {
+    public static void sharePage(final Activity a, final File file, int page, String pageUrl) {
         try {
             if (AppState.get().fileToDelete != null) {
                 new File(AppState.get().fileToDelete).delete();
             }
-            String url = IMG.toUrlWithContext(file.getPath(), page, (int) (Dips.screenWidth() * 1.5));
-            Bitmap imageBitmap = ImageLoader.getInstance().loadImageSync(url, IMG.ExportOptions);
+
+            if (TxtUtils.isEmpty(pageUrl)) {
+                pageUrl = IMG.toUrlWithContext(file.getPath(), page, (int) (Dips.screenWidth() * 1.5));
+            }
+
+            Bitmap imageBitmap = ImageLoader.getInstance().loadImageSync(pageUrl, IMG.ExportOptions);
 
             String title = file.getName() + "." + (page + 1) + ".jpg";
 
@@ -716,11 +958,11 @@ public class ExtUtils {
 
             Intent shareIntent = new Intent();
             shareIntent.setAction(Intent.ACTION_SEND);
-            shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            shareIntent.putExtra(Intent.EXTRA_STREAM, getUriProvider(a, oFile));
+            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, getUriProvider(a, oFile));
             shareIntent.setType("image/jpeg");
-            a.startActivity(shareIntent);
+            a.startActivity(Intent.createChooser(shareIntent, a.getString(R.string.send_snapshot_of_the_page)));
 
         } catch (Exception e) {
             Toast.makeText(a, R.string.msg_unexpected_error, Toast.LENGTH_LONG).show();
@@ -737,7 +979,7 @@ public class ExtUtils {
         final List<AppBookmark> bookmarksByBook = AppSharedPreferences.get().getBookmarksByBook(file);
 
         final Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setType("text/plain");
 
         if (bookmarksByBook != null && !bookmarksByBook.isEmpty()) {
@@ -750,7 +992,7 @@ public class ExtUtils {
             intent.putExtra(Intent.EXTRA_TEXT, result.toString());
         }
 
-        a.startActivity(intent);
+        a.startActivity(Intent.createChooser(intent, a.getString(R.string.export_bookmarks)));
     }
 
     public static void exportAllBookmarksToFile(final FragmentActivity a) {
@@ -802,7 +1044,7 @@ public class ExtUtils {
                         jsonObject = jsonObject.getJSONObject(ExportSettingsManager.PREFIX_BOOKMARKS_PREFERENCES);
                     }
 
-                    ExportSettingsManager.importFromJSon(jsonObject, AppSharedPreferences.get().getBookmarkPreferences(), null);
+                    ExportSettingsManager.importFromJSon(jsonObject, AppSharedPreferences.get().getBookmarkPreferences());
                     Toast.makeText(a, R.string.success, Toast.LENGTH_LONG).show();
                     onSuccess.run();
                 } catch (Exception e) {
@@ -873,45 +1115,70 @@ public class ExtUtils {
 
     public static void exportAllBookmarksToGmail(Activity a) {
         final Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setType("text/plain");
         intent.putExtra(Intent.EXTRA_TEXT, getAllExportString(a, AppSharedPreferences.get()));
-        a.startActivity(intent);
+        a.startActivity(Intent.createChooser(intent, a.getString(R.string.export_bookmarks)));
     }
 
-    public static void openPDFInTextReflow(final Activity a, final File file, final int page) {
+    public static void openPDFInTextReflow(final Activity a, final File file, final int page, final DocumentController dc) {
         if (ExtUtils.isNotValidFile(file)) {
             Toast.makeText(a, R.string.file_not_found, Toast.LENGTH_SHORT).show();
             return;
         }
 
         new AsyncTask() {
-            ProgressDialog dialog;
+            AlertDialog dialog;
 
             Handler handler;
 
             @Override
             protected void onPreExecute() {
-                dialog = new ProgressDialog(a);
-                dialog.setMessage(a.getString(R.string.msg_loading));
-                dialog.setCancelable(false);
+                TempHolder.get().isConverting = true;
+
+                final AlertDialog.Builder builder = new AlertDialog.Builder(a);
+                View view = LayoutInflater.from(a).inflate(R.layout.dialog_loading_book, null, false);
+                final TextView text = (TextView) view.findViewById(R.id.text1);
+
                 handler = new Handler() {
                     @Override
                     public void handleMessage(android.os.Message msg) {
-                        dialog.setMessage(a.getString(R.string.msg_loading) + " " + msg.what + "/100%");
-
+                        text.setText(a.getString(R.string.please_wait) + " " + msg.what + "/100%");
                     };
                 };
-                dialog.show();
+
+                ImageView image = (ImageView) view.findViewById(R.id.onCancel);
+                TintUtil.setTintImageWithAlpha(image);
+                image.setOnClickListener(new OnClickListener() {
+
+                    @Override
+                    public void onClick(View v) {
+                        LOG.d("loadingBook Cancel");
+                        TempHolder.get().isConverting = false;
+                        dialog.dismiss();
+                    }
+                });
+
+                builder.setView(view);
+                builder.setCancelable(false);
+
+                dialog = builder.show();
+                dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+
             };
 
             @Override
             protected Object doInBackground(Object... params) {
-                return openPDFInTextReflowAsync(a, file, handler);
+                try {
+                    return openPDFInTextReflowAsync(a, file, handler);
+                } catch (RuntimeException e) {
+                    LOG.e(e);
+                    return null;
+                }
             };
 
             @Override
-            protected void onPostExecute(Object result) {
+            protected void onPostExecute(final Object result) {
                 if (dialog != null) {
                     try {
                         dialog.dismiss();
@@ -919,58 +1186,140 @@ public class ExtUtils {
                         LOG.e(e);
                     }
                 }
+                if (!TempHolder.get().isConverting) {
+                    return;
+                }
                 if (result != null) {
-                    if (a instanceof ViewerActivity) {
-                        AppState.getInstance().isAlwaysOpenAsMagazine = false;
-                        AppState.getInstance().isMusicianMode = false;
-                        showDocumentWithoutDialog(a, (File) result, page);
+                    Runnable run = new Runnable() {
 
-                    } else if (a instanceof HorizontalViewActivity) {
-                        AppState.getInstance().isAlwaysOpenAsMagazine = true;
-                        AppState.getInstance().isMusicianMode = false;
-                        showDocumentWithoutDialog(a, (File) result, page);
+                        @Override
+                        public void run() {
+                            if (a instanceof VerticalViewActivity) {
+                                AppState.get().isAlwaysOpenAsMagazine = false;
+                                AppState.get().isMusicianMode = false;
+                                showDocumentWithoutDialog(a, (File) result, page);
+
+                            } else if (a instanceof HorizontalViewActivity) {
+                                AppState.get().isAlwaysOpenAsMagazine = true;
+                                AppState.get().isMusicianMode = false;
+                                showDocumentWithoutDialog(a, (File) result, page);
+                            } else {
+                                showDocument(a, (File) result);
+                            }
+                        }
+                    };
+                    if (dc != null) {
+                        dc.onCloseActivityFinal(run);
                     } else {
-                        showDocument(a, (File) result);
+                        Safe.run(run);
                     }
+
                 }
             };
 
         }.execute();
     }
 
-    public static File openPDFInTextReflowAsync(Activity a, File file, Handler dialog) {
+    public static File openPDFInTextReflowAsync(Activity a, final File file, Handler dialog) {
         try {
-            if (!CacheZipUtils.LIRBI_DOWNLOAD_DIR.exists()) {
-                CacheZipUtils.LIRBI_DOWNLOAD_DIR.mkdirs();
+            File bookTempRoot = new File(AppState.get().downlodsPath, file.getName());
+            if (!bookTempRoot.exists()) {
+                bookTempRoot.mkdirs();
+            } else {
+                CacheZipUtils.removeFiles(bookTempRoot.listFiles());
             }
 
-            CodecDocument doc = BookType.getCodecContextByPath(file.getPath()).openDocument(file.getPath(), "");
-
-            final File filefb2 = new File(CacheZipUtils.LIRBI_DOWNLOAD_DIR, file.getName() + REFLOW_FB2);
+            String pwd = "";
             try {
-                FileWriter fout = new FileWriter(filefb2);
+                pwd = a.getIntent().getStringExtra(HorizontalModeController.PASSWORD_EXTRA);
+                if (pwd == null) {
+                    pwd = "";
+                }
+            } catch (Exception e) {
+                LOG.e(e);
+            }
+
+            CodecDocument doc = BookType.getCodecContextByPath(file.getPath()).openDocument(file.getPath(), pwd);
+
+            List<OutlineLink> outline = doc.getOutline();
+
+            final File fileReflowHtml = new File(bookTempRoot, "temp" + REFLOW_HTML);
+            try {
+                FileWriter fout = new FileWriter(fileReflowHtml);
                 BufferedWriter out = new BufferedWriter(fout);
                 out.write("<html>");
-
-                out.write("<title-info>");
-                out.write("<author><first-name>Lirbi Reflow</first-name></autor><br/>");
-                out.write("<book-title><h1>" + file.getName() + "</h1></book-title>");
-                out.write("</title-info>");
-
+                out.write("<head><meta charset=\"utf-8\"/></head>");
                 out.write("<body>");
 
                 int pages = doc.getPageCount();
 
+                int imgCount = 0;
                 for (int i = 0; i < pages; i++) {
                     LOG.d("Extract page", i);
                     CodecPage pageCodec = doc.getPage(i);
-                    String html = pageCodec.getPageHTML();
+                    String html = pageCodec.getPageHTMLWithImages();
+
+                    out.write("<a id=\"" + i + "\"></a>");
+
+                    html = TxtUtils.replaceEndLine(html);
+
+                        int startImage = html.indexOf(IMAGE_BEGIN);
+                        while (startImage >= 0) {
+                            if (!TempHolder.get().isConverting) {
+                                CacheZipUtils.removeFiles(bookTempRoot.listFiles());
+                                bookTempRoot.delete();
+                                break;
+                            }
+                            imgCount++;
+                            LOG.d("Extract image", imgCount);
+                            int endImage = html.indexOf(IMAGE_END, startImage);
+
+                            String mime = html.substring(startImage + IMAGE_BEGIN.length(), endImage);
+                            String format;
+                            if (mime.startsWith(IMAGE_JPEG_BASE64)) {
+                                format = ".jpg";
+                                mime = mime.replace(IMAGE_JPEG_BASE64, "");
+                            } else if (mime.startsWith(IMAGE_PNG_BASE64)) {
+                                format = ".png";
+                                mime = mime.replace(IMAGE_PNG_BASE64, "");
+                            } else {
+                                format = ".none";
+                            }
+
+                            byte[] decode = Base64.decode(mime, Base64.DEFAULT);
+
+                            String imageName = imgCount + format;
+
+                            LOG.d("Extract-mime", mime.substring(mime.length() - 10, mime.length()));
+
+                            FileOutputStream imgStream = new FileOutputStream(new File(bookTempRoot, imageName));
+                            imgStream.write(decode);
+                            imgStream.close();
+
+                            html = html.substring(0, startImage) + "<img src=\"" + imageName + "\"/>" + html.substring(endImage + IMAGE_END.length());
+                            startImage = html.indexOf(IMAGE_BEGIN);
+                            LOG.d("startImage", startImage);
+                        }
+
+                    // out.write(TextUtils.htmlEncode(html));
+                    // html = html.replace("< ", "&lt; ");
+                    // html = html.replace("> ", "&gt; ");
+                    // html = html.replace("&", "&amp;");
+
                     out.write(html);
                     pageCodec.recycle();
                     LOG.d("Extract page end1", i);
                     dialog.sendEmptyMessage(((i + 1) * 100) / pages);
 
+                    if (!TempHolder.get().isConverting) {
+                        CacheZipUtils.removeFiles(bookTempRoot.listFiles());
+                        bookTempRoot.delete();
+                        break;
+                    }
+
                 }
+                doc.recycle();
+
                 out.write("</body></html>");
                 out.flush();
                 out.close();
@@ -979,13 +1328,46 @@ public class ExtUtils {
                 LOG.e(e);
                 return null;
             }
-            LOG.d("openPDFInTextReflow", filefb2.getPath());
-            return filefb2;
-        } catch (Exception e) {
+
+            File epubOutpub = new File(AppState.get().downlodsPath, file.getName() + REFLOW_EPUB);
+            if (epubOutpub.isFile()) {
+                epubOutpub.delete();
+            }
+
+            FileMeta meta = AppDB.get().getOrCreate(file.getPath());
+
+            Fb2Extractor.convertFolderToEpub(bookTempRoot, epubOutpub, meta.getAuthor(), meta.getTitle(), outline);
+
+            CacheZipUtils.removeFiles(bookTempRoot.listFiles());
+            bookTempRoot.delete();
+
+            if (!TempHolder.get().isConverting) {
+                epubOutpub.delete();
+                LOG.d("Delete temp file", fileReflowHtml.getPath());
+            }
+
+            LOG.d("openPDFInTextReflow", fileReflowHtml.getPath());
+            return epubOutpub;
+        } catch (RuntimeException e) {
             LOG.e(e);
             return null;
         }
 
+    }
+
+    public static String escapeHTML(String s) {
+        StringBuilder out = new StringBuilder(Math.max(16, s.length()));
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c > 127 || c == '"' || c == '<' || c == '>' || c == '&') {
+                out.append("&#");
+                out.append((int) c);
+                out.append(';');
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
     }
 
     public static List<String> getExternalStorageDirectories1(Context c) {
@@ -999,6 +1381,52 @@ public class ExtUtils {
         }
 
         return res;
+    }
+
+    public static String getSDPath() {
+        String[] strPath = { //
+                "/storage/sdcard1", //
+                "/storage/extsdcard", //
+                "/storage/extSdCard", //
+                "/storage/sdcard0/external_sdcard", //
+                "/storage/external_SD", //
+                "/storage/ext_sd", //
+                "/storage/removable/sdcard1", //
+
+                "/data/sdext", //
+                "/data/sdext2", //
+                "/data/sdext3", //
+                "/data/sdext4", //
+
+                "/removable/microsd", //
+                "/Removable/MicroSD", //
+                "/emmc", //
+                "/sdcard/sd", //
+
+                "/mnt/extsdcard", //
+                "/mnt/sdcard/external_sd", //
+                "/mnt/external_sd", //
+                "/mnt/emmc", //
+                "/mnt/media_rw/sdcard1", //
+                "/mnt/sdcard/bpemmctest", //
+                "/mnt/sdcard/_ExternalSD", //
+                "/mnt/sdcard-ext", //
+                "/mnt/Removable/MicroSD", //
+                "/mnt/external1", //
+                "/mnt/extsd", //
+                "/mnt/usb_storage", //
+                "/mnt/extSdCard", //
+                "/mnt/UsbDriveA", //
+                "/mnt/UsbDriveB"//
+        };
+
+        for (String value : strPath) {
+            File f = new File(value);
+            if (f.exists() && f.isDirectory() && f.canRead()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)

@@ -13,12 +13,14 @@ import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
 import com.foobnix.dao2.FileMeta;
 import com.foobnix.ext.CacheZipUtils;
+import com.foobnix.ext.CacheZipUtils.CacheDir;
 import com.foobnix.ext.CacheZipUtils.UnZipRes;
 import com.foobnix.ext.CalirbeExtractor;
 import com.foobnix.ext.EbookMeta;
 import com.foobnix.ext.EpubExtractor;
 import com.foobnix.ext.Fb2Extractor;
 import com.foobnix.ext.MobiExtract;
+import com.foobnix.ext.PdfExtract;
 import com.foobnix.pdf.info.ExtUtils;
 
 import android.app.Activity;
@@ -44,7 +46,7 @@ public class FileMetaCore {
                 FileMeta fileMeta = AppDB.get().getOrCreate(path);
                 if (TxtUtils.isEmpty(fileMeta.getTitle())) {
 
-                    EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(path);
+                    EbookMeta ebookMeta = FileMetaCore.get().getEbookMeta(path, CacheDir.ZipApp, false);
 
                     FileMetaCore.get().upadteBasicMeta(fileMeta, new File(path));
                     FileMetaCore.get().udpateFullMeta(fileMeta, ebookMeta);
@@ -60,20 +62,20 @@ public class FileMetaCore {
         }
     }
 
-    public EbookMeta getEbookMeta(String path) {
+    public EbookMeta getEbookMeta(String path, CacheDir folder, boolean withPDF) {
         EbookMeta ebookMeta = EbookMeta.Empty();
         try {
             if (path.toLowerCase(Locale.US).endsWith(".zip")) {
                 CacheZipUtils.cacheLock.lock();
                 try {
-                    UnZipRes res = CacheZipUtils.extracIfNeed(path);
-                    ebookMeta = getEbookMeta(path, res.unZipPath, res.entryName);
+                    UnZipRes res = CacheZipUtils.extracIfNeed(path, folder);
+                    ebookMeta = getEbookMeta(path, res.unZipPath, res.entryName, withPDF);
                     ebookMeta.setUnzipPath(res.unZipPath);
                 } finally {
                     CacheZipUtils.cacheLock.unlock();
                 }
             } else {
-                ebookMeta = getEbookMeta(path, path, null);
+                ebookMeta = getEbookMeta(path, path, null, withPDF);
                 ebookMeta.setUnzipPath(path);
             }
 
@@ -84,22 +86,35 @@ public class FileMetaCore {
 
     }
 
-    private EbookMeta getEbookMeta(String path, String unZipPath, String child) throws IOException {
+    public static boolean isNeedToExtractPDFMeta(String path) {
+        return !path.contains(" - ") && BookType.PDF.is(path);
+    }
+
+    private EbookMeta getEbookMeta(String path, String unZipPath, String child, boolean withDPF) throws IOException {
         EbookMeta ebookMeta = EbookMeta.Empty();
+        String fileName = ExtUtils.getFileName(unZipPath);
+        String fileNameOriginal = ExtUtils.getFileName(path);
+        if (BookType.FB2.is(unZipPath) || BookType.FB2.is(unZipPath)) {
+            fileNameOriginal = TxtUtils.encode1251(fileNameOriginal);
+            fileName = TxtUtils.encode1251(fileNameOriginal);
+        }
 
         if (CalirbeExtractor.isCalibre(unZipPath)) {
             ebookMeta = CalirbeExtractor.getBookMetaInformation(unZipPath);
-            LOG.d("isCalibre find");
+            LOG.d("isCalibre find", unZipPath);
         } else if (BookType.EPUB.is(unZipPath)) {
             ebookMeta = EpubExtractor.get().getBookMetaInformation(unZipPath);
         } else if (BookType.FB2.is(unZipPath)) {
             ebookMeta = Fb2Extractor.get().getBookMetaInformation(unZipPath);
         } else if (BookType.MOBI.is(unZipPath)) {
             ebookMeta = MobiExtract.getBookMetaInformation(unZipPath, true);
+        } else if (withDPF && isNeedToExtractPDFMeta(unZipPath)) {
+            ebookMeta = PdfExtract.getBookMetaInformation(unZipPath);
         }
+
         if (TxtUtils.isEmpty(ebookMeta.getTitle())) {
-            Pair<String, String> pair = TxtUtils.getTitleAuthorByPath(ExtUtils.getFileName(unZipPath));
-            ebookMeta = new EbookMeta(pair.first, pair.second);
+            Pair<String, String> pair = TxtUtils.getTitleAuthorByPath(fileName);
+            ebookMeta = new EbookMeta(pair.first, TxtUtils.isNotEmpty(ebookMeta.getAuthor()) ? ebookMeta.getAuthor() : pair.second);
         }
 
         if (ebookMeta.getsIndex() == null && (path.contains("_") || path.contains(")"))) {
@@ -116,7 +131,7 @@ public class FileMetaCore {
         }
 
         if (path.endsWith(".zip") && !path.endsWith("fb2.zip")) {
-            ebookMeta.setTitle("{" + ExtUtils.getFileName(path) + "} " + ebookMeta.getTitle());
+            ebookMeta.setTitle("{" + fileNameOriginal + "} " + ebookMeta.getTitle());
         }
 
         return ebookMeta;
@@ -130,7 +145,7 @@ public class FileMetaCore {
                 return CalirbeExtractor.getBookOverview(path);
             }
 
-            path = CacheZipUtils.extracIfNeed(path).unZipPath;
+            path = CacheZipUtils.extracIfNeed(path, CacheDir.ZipApp).unZipPath;
 
             if (BookType.EPUB.is(path)) {
                 info = EpubExtractor.get().getBookOverview(path);
@@ -158,22 +173,26 @@ public class FileMetaCore {
         fileMeta.setAnnotation(meta.getAnnotation());
         fileMeta.setSIndex(meta.getsIndex());
         fileMeta.setChild(ExtUtils.getFileExtension(meta.getUnzipPath()));
-        fileMeta.setLang(meta.getLang());
+        fileMeta.setLang(TxtUtils.toLowerCase(meta.getLang()));
 
     }
 
     public void upadteBasicMeta(FileMeta fileMeta, File file) {
-        String path = file.getPath();
-
         fileMeta.setTitle(file.getName());// temp
 
         fileMeta.setSize(file.length());
         fileMeta.setDate(file.lastModified());
 
-        fileMeta.setExt(ExtUtils.getFileExtension(path));
+        fileMeta.setExt(ExtUtils.getFileExtension(file));
         fileMeta.setSizeTxt(ExtUtils.readableFileSize(file.length()));
         fileMeta.setDateTxt(ExtUtils.getDateFormat(file));
-        fileMeta.setPathTxt(file.getName());
+
+        if (BookType.FB2.is(file.getName())) {
+            fileMeta.setPathTxt(TxtUtils.encode1251(file.getName()));
+        } else {
+            fileMeta.setPathTxt(file.getName());
+
+        }
     }
 
 }

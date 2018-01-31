@@ -10,13 +10,16 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
+import com.foobnix.android.utils.LOG;
 import com.foobnix.android.utils.TxtUtils;
+import com.foobnix.dao2.FileMeta;
 import com.foobnix.pdf.info.ExportSettingsManager;
 import com.foobnix.pdf.info.ExtUtils;
 import com.foobnix.pdf.info.FontExtractor;
 import com.foobnix.pdf.info.Urls;
 import com.foobnix.pdf.info.wrapper.AppState;
 import com.foobnix.pdf.info.wrapper.MagicHelper;
+import com.foobnix.ui2.AppDB;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -66,7 +69,7 @@ public class BookCSS {
     public int lineHeight;
     public int textIndent;
     public int fontWeight;
-    public String customCSS;
+    public String customCSS1;
 
     public int textAlign;
 
@@ -83,8 +86,6 @@ public class BookCSS {
     public String linkColorDay;
     public String linkColorNight;
 
-    public int spinnerIndex = FONT_NAMES.indexOf(DEFAULT_FONT);
-
     public void load(Context c) {
         if (c == null) {
             return;
@@ -92,7 +93,7 @@ public class BookCSS {
         resetToDefault(c);
 
         SharedPreferences sp = c.getSharedPreferences(ExportSettingsManager.PREFIX_BOOK_CSS, Context.MODE_PRIVATE);
-        fontFolder = sp.getString("fontFolder", fontFolder);
+        fontFolder = sp.getString("fontFolder1", fontFolder);
 
         normalFont = sp.getString("normalFont", normalFont);
         boldFont = sp.getString("boldFont", boldFont);
@@ -106,15 +107,14 @@ public class BookCSS {
         marginBottom = sp.getInt("marginBottom", marginBottom);
         marginLeft = sp.getInt("marginLeft", marginLeft);
         emptyLine = sp.getInt("emptyLine", emptyLine);
-        customCSS = sp.getString("customCSS", customCSS);
+        customCSS1 = sp.getString("customCSS1", customCSS1);
 
         lineHeight = sp.getInt("lineHeight", lineHeight);
         textIndent = sp.getInt("textIndent", textIndent);
         fontWeight = sp.getInt("fontWeight", fontWeight);
-        spinnerIndex = sp.getInt("spinnerIndex", spinnerIndex);
         documentStyle = sp.getInt("documentStyle", documentStyle);
 
-        isAutoHypens = sp.getBoolean("isAutoHypens", isAutoHypens);
+        isAutoHypens = sp.getBoolean("isAutoHypens1", isAutoHypens);
         hypenLang = sp.getString("hypenLang", hypenLang);
         linkColorDay = sp.getString("linkColorDay", linkColorDay);
         linkColorNight = sp.getString("linkColorNight", linkColorNight);
@@ -145,7 +145,7 @@ public class BookCSS {
         textIndent = 10;
         fontWeight = 400;
 
-        fontFolder = FontExtractor.getFontsDir(c, FONTS_DIR).getPath();
+        fontFolder = DEFAULT_FOLDER(c);
         normalFont = DEFAULT_FONT;
         boldFont = DEFAULT_FONT;
         italicFont = DEFAULT_FONT;
@@ -153,13 +153,29 @@ public class BookCSS {
         headersFont = DEFAULT_FONT;
 
         documentStyle = STYLES_DOC_AND_USER;
-        isAutoHypens = Arrays.asList("ru", "uk", "tr").contains(Urls.getLangCode());
+        isAutoHypens = true;
         hypenLang = "ru";
 
         linkColorDay = LINK_COLOR_UNIVERSAL;
         linkColorNight = LINK_COLOR_UNIVERSAL;
-        customCSS = "pre {white-space: pre} /* pre, normal*/ \n" + //
-                "figure>* {font-size: 0.6em}";
+        customCSS1 = "pre > * {white-space: pre; font-size: 0.7em;} /* pre, normal*/ \n" + //
+                "svg {display:block} \n" + //
+                "figure > * {font-size: 0.7em}";
+
+        LOG.d("BookCSS", "resetToDefault");
+
+    }
+
+    private String DEFAULT_FOLDER(Context c) {
+        return FontExtractor.getFontsDir(c, FONTS_DIR).getPath();
+    }
+
+    public void checkBeforeExport(Context c) {
+        if (fontFolder != null && fontFolder.equals(DEFAULT_FOLDER(c))) {
+            fontFolder = null;
+            save(c);
+            fontFolder = DEFAULT_FOLDER(c);
+        }
 
     }
 
@@ -173,7 +189,7 @@ public class BookCSS {
         }
         SharedPreferences sp = c.getSharedPreferences(ExportSettingsManager.PREFIX_BOOK_CSS, Context.MODE_PRIVATE);
         Editor edit = sp.edit();
-        edit.putString("fontFolder", fontFolder);
+        edit.putString("fontFolder1", fontFolder);
 
         edit.putString("normalFont", normalFont);
         edit.putString("boldFont", boldFont);
@@ -187,14 +203,13 @@ public class BookCSS {
         edit.putInt("marginBottom", marginBottom);
         edit.putInt("marginLeft", marginLeft);
         edit.putInt("emptyLine", emptyLine);
-        edit.putString("customCSS", customCSS);
+        edit.putString("customCSS1", customCSS1);
 
         edit.putInt("lineHeight", lineHeight);
         edit.putInt("textIndent", textIndent);
         edit.putInt("fontWeight", fontWeight);
-        edit.putInt("spinnerIndex", spinnerIndex);
         edit.putInt("documentStyle", documentStyle);
-        edit.putBoolean("isAutoHypens", isAutoHypens);
+        edit.putBoolean("isAutoHypens1", isAutoHypens);
         edit.putString("hypenLang", hypenLang);
         edit.putString("linkColorDay", linkColorDay);
         edit.putString("linkColorNight", linkColorNight);
@@ -277,14 +292,7 @@ public class BookCSS {
                 List<String> filtered = new ArrayList<String>();
 
                 for (String fontName : list) {
-                    String ext = ExtUtils.getFileExtension(fontName);
-                    if (fontName.contains("-")) {
-                        fontName = fontName.substring(0, fontName.lastIndexOf("-")) + "." + ext;
-                    } else if (fontName.contains("_")) {
-                        fontName = fontName.substring(0, fontName.lastIndexOf("_")) + "." + ext;
-                    } else if (fontName.contains(" ")) {
-                        fontName = fontName.substring(0, fontName.lastIndexOf(" ")) + "." + ext;
-                    }
+                    fontName = filterFontName(fontName);
 
                     if (!filtered.contains(fontName)) {
                         filtered.add(fontName);
@@ -302,6 +310,21 @@ public class BookCSS {
             }
         }
         return Collections.EMPTY_LIST;
+    }
+
+    public static String filterFontName(String fontName) {
+        if (!fontName.contains(".")) {
+            return fontName;
+        }
+        String ext = ExtUtils.getFileExtension(fontName);
+        if (fontName.contains("-")) {
+            fontName = fontName.substring(0, fontName.lastIndexOf("-")) + "." + ext;
+        } else if (fontName.contains("_")) {
+            fontName = fontName.substring(0, fontName.lastIndexOf("_")) + "." + ext;
+        } else if (fontName.contains(" ")) {
+            fontName = fontName.substring(0, fontName.lastIndexOf(" ")) + "." + ext;
+        }
+        return fontName;
     }
 
     private Collection<String> getAllFontsFromFolder(String path) {
@@ -391,7 +414,7 @@ public class BookCSS {
         String textColor = MagicHelper.colorToString(MagicHelper.getTextColor());
 
         builder.append("documentStyle" + documentStyle + "{}");
-        builder.append("isAutoHypens" + isAutoHypens + hypenLang + "{}");
+        builder.append("isAutoHypens1" + isAutoHypens + hypenLang + "{}");
 
         // PAGE BEGIN
         builder.append("@page{");
@@ -428,7 +451,7 @@ public class BookCSS {
 
         if (documentStyle == STYLES_DOC_AND_USER || documentStyle == STYLES_ONLY_USER) {
 
-            if (AppState.get().isInvert) {
+            if (AppState.get().isDayNotInvert) {
                 builder.append("a{color:" + linkColorDay + " !important;}");
             } else {
                 builder.append("a{color:" + linkColorNight + " !important;}");
@@ -505,7 +528,7 @@ public class BookCSS {
                 builder.append("i{font-family:" + italicFont + "; font-style: italic, oblique;}");
             }
             builder.append("body,p,b,i,em{font-size:medium !important;}");
-            builder.append(customCSS.replace("\n", ""));
+            builder.append(customCSS1.replace("\n", ""));
 
         }
 
@@ -539,6 +562,16 @@ public class BookCSS {
 
     public String getFontPath(String name) {
         return fontFolder + "/" + name;
+    }
+
+    public void detectLang(String bookPath) {
+        FileMeta meta = AppDB.get().load(bookPath);
+        if (meta != null) {
+            BookCSS.get().hypenLang = meta.getLang();
+        }
+        if (TxtUtils.isEmpty(BookCSS.get().hypenLang)) {
+            BookCSS.get().hypenLang = Urls.getLangCode();
+        }
     }
 
 }

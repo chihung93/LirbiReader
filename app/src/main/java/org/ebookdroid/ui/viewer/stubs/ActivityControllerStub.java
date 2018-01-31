@@ -1,6 +1,6 @@
 package org.ebookdroid.ui.viewer.stubs;
 
-import org.ebookdroid.LirbiApp;
+import org.ebookdroid.LibreraApp;
 import org.ebookdroid.core.DecodeService;
 import org.ebookdroid.core.ViewState;
 import org.ebookdroid.core.models.DecodingProgressModel;
@@ -9,7 +9,7 @@ import org.ebookdroid.core.models.ZoomModel;
 import org.ebookdroid.ui.viewer.IActivityController;
 import org.ebookdroid.ui.viewer.IView;
 import org.ebookdroid.ui.viewer.IViewController;
-import org.ebookdroid.ui.viewer.ViewerActivity;
+import org.ebookdroid.ui.viewer.VerticalViewActivity;
 
 import android.app.Activity;
 import android.content.Context;
@@ -17,9 +17,9 @@ import android.content.Context;
 import org.emdev.ui.actions.ActionController;
 import org.emdev.ui.actions.IActionController;
 
-import com.foobnix.sys.AdvModeController;
+import com.foobnix.sys.VerticalModeController;
 
-public class ActivityControllerStub extends ActionController<ViewerActivity> implements IActivityController {
+public class ActivityControllerStub extends ActionController<VerticalViewActivity> implements IActivityController {
 
     public static final ActivityControllerStub STUB = new ActivityControllerStub();
 
@@ -34,7 +34,7 @@ public class ActivityControllerStub extends ActionController<ViewerActivity> imp
 
     @Override
     public Context getContext() {
-        return LirbiApp.context;
+        return LibreraApp.context;
     }
 
     @Override
@@ -83,7 +83,7 @@ public class ActivityControllerStub extends ActionController<ViewerActivity> imp
     }
 
     @Override
-    public AdvModeController getListener() {
+    public VerticalModeController getListener() {
         return null;
     }
 
